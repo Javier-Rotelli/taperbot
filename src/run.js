@@ -6,14 +6,11 @@ import {getConfig} from './config'
 
 const conf = getConfig();
 
-const isMessage = (mess) => mess.type === 'message';
 const isFromUser = (mess, uid) => mess.user === uid;
-const mentionsUser = (mess, uid) => mess.text.includes(`<@${uid}>`);
+const mentionsUser = (mess, uid) => mess.text && mess.text.includes(`<@${uid}>`);
 const isFromChannels = (mess, channels) => channels.includes(mess.channel);
 
-export const shouldProcess = (message, userId, ignoredChannels) => !isFromChannels(message, ignoredChannels)
-                                                                   && isMessage(message)
-                                                                   && !isFromUser(message, userId)
+export const shouldProcess = (message, userId) => !isFromUser(message, userId)
                                                                    && mentionsUser(message, userId);
 
 const startServer = (url) => {
@@ -29,10 +26,22 @@ const startServer = (url) => {
   });
 
   ws.on('message', (raw_message) => {
-    const message = JSON.parse(raw_message);
-    if (shouldProcess(message, conf.userId, conf.ignoredChannels)){
-      emitter.emit('received:message', message);
+    const payload = JSON.parse(raw_message);
+    if(isFromChannels(payload, conf.ignoredChannels)) {
+      return;
     }
+    console.log(payload);
+    switch (payload.type) {
+      case 'message':
+        if (shouldProcess(payload, conf.userId)){
+          emitter.emit('received:message', payload);
+        }
+        break;
+      case 'reaction_added':
+        emitter.emit('reaction:added', payload);
+        break;
+    }
+
   });
 
   emitter.on('send:message', (content, channel) => {
