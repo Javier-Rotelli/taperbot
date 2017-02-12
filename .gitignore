@@ -38,3 +38,6 @@ config.yml
 
 # IDE config
 .idea/
+
+.nyc_output/
+coverage/
