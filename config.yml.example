@@ -1,0 +1,11 @@
+apiToken: thisIsASecretToken
+userId: U3FTH76RZ
+ignoredChannels:
+  - C02TUBDTJ #General
+  - C052AP8CB #General-es
+plugins:
+  echo:
+    true
+  rati:
+    channel: C3Y4C39CY
+    cook: U3YV35Y2Z
