@@ -11,7 +11,7 @@ const mentionsUser = (mess, uid) => mess.text && mess.text.includes(`<@${uid}>`)
 const isFromChannels = (mess, channels) => channels.includes(mess.channel);
 
 export const shouldProcess = (message, userId) => !isFromUser(message, userId)
-                                                                   && mentionsUser(message, userId);
+                                                   && mentionsUser(message, userId);
 
 const startServer = (url) => {
   const ws = new WebSocket(url);
