@@ -4,3 +4,5 @@ node_js:
   - "4"
 before_install:
   - cp config.yml.example config.yml
+notifications:
+  email: false
