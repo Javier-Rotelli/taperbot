@@ -3,7 +3,7 @@ export default (config, emitter) => {
     if(payload.item.type == 'message'
       && payload.item.channel == config.channel
       && payload.item_user == config.cook){
-        const time = new Date(item.event_ts * 1000).getHours();
+        const time = new Date(item.event_ts).getHours();
         if(time >= 10 && time < 14) {
           const text = `<@${payload.item.user}> \r\n https://media.giphy.com/media/26uf3DbP1a8nwAw6c/giphy.gif`;
           emitter.emit('send:message',text, payload.item.channel);
