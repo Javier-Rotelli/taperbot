@@ -4,7 +4,7 @@ module.exports = function (shipit) {
   require('shipit-deploy')(shipit);
   require('shipit-npm')(shipit);
   require('shipit-pm2')(shipit);
-  var config = require('./shipitfile.config.json')
+  var config = require('./shipitfile.config.json');
 
   shipit.initConfig({
     default: {
@@ -15,11 +15,17 @@ module.exports = function (shipit) {
       ignores: ['.git'],
       keepReleases: 2,
       deleteOnRollback: false,
-      shallowClone: true
+      shallowClone: true,
+      shared: {
+        overwrite: true,
+        files: [
+          'config.yml'
+        ]
+      }
     },
     staging: {
       servers: {
-        host: 'beta.utnianos.com.ar',
+        host: config.staging.host,
         user: config.staging.user,
       },
       key: config.staging.sshKey

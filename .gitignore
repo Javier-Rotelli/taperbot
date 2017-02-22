@@ -41,3 +41,5 @@ config.yml
 
 .nyc_output/
 coverage/
+
+shipitfile.config.json

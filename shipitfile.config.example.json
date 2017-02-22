@@ -1,5 +1,6 @@
 {
   "staging": {
+    "host": "host",
     "user": "taperbot",
     "sshKey": null
   }
