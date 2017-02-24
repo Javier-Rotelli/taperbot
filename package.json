@@ -6,7 +6,9 @@
   "scripts": {
     "start": "nodemon --exec babel-node -- src/run",
     "test": "export NODE_PATH=./ && mocha --compilers js:babel-register --recursive",
-    "deploy": "shipit staging deploy"
+    "deploy": "shipit staging deploy",
+    "lint": "standard; exit 0;",
+    "lint:fix": "standard --fix"
   },
   "author": "Javier Rotelli",
   "repository": {
@@ -34,6 +36,7 @@
     "shipit-npm": "^0.2.0",
     "shipit-pm2": "0.0.4",
     "shipit-shared": "^4.4.2",
-    "should": "^4.4.4"
+    "should": "^4.4.4",
+    "standard": "^8.6.0"
   }
 }
