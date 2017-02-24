@@ -8,6 +8,7 @@
     "test": "export NODE_PATH=./ && mocha --compilers js:babel-register --recursive",
     "deploy": "shipit staging deploy",
     "lint": "standard; exit 0;",
+    "lint:ci": "standard",
     "lint:fix": "standard --fix"
   },
   "author": "Javier Rotelli",

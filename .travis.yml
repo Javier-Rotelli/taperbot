@@ -4,5 +4,8 @@ node_js:
   - "4"
 before_install:
   - cp config.yml.example config.yml
+script:
+  - npm run lint:ci
+  - npm test
 notifications:
   email: false

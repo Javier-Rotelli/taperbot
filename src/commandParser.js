@@ -1,8 +1,8 @@
 export default text => {
-  const commandParserRegex = /<@[^>]*> *\/([a-z]*)(.*)/i;
-  const regexResult = commandParserRegex.exec(text);
+  const commandParserRegex = /<@[^>]*> *\/([a-z]*)(.*)/i
+  const regexResult = commandParserRegex.exec(text)
 
-  if(regexResult === null) {
+  if (regexResult === null) {
     return regexResult
   }
 
@@ -10,4 +10,4 @@ export default text => {
     command: regexResult[1],
     text: regexResult[2]
   }
-};
+}

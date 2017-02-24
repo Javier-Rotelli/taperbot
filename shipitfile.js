@@ -1,10 +1,10 @@
-var pkg = require('./package.json');
+var pkg = require('./package.json')
 
 module.exports = function (shipit) {
-  require('shipit-deploy')(shipit);
-  require('shipit-npm')(shipit);
-  require('shipit-pm2')(shipit);
-  var config = require('./shipitfile.config.json');
+  require('shipit-deploy')(shipit)
+  require('shipit-npm')(shipit)
+  require('shipit-pm2')(shipit)
+  var config = require('./shipitfile.config.json')
 
   shipit.initConfig({
     default: {
@@ -26,9 +26,9 @@ module.exports = function (shipit) {
     staging: {
       servers: {
         host: config.staging.host,
-        user: config.staging.user,
+        user: config.staging.user
       },
       key: config.staging.sshKey
     }
-  });
-};
+  })
+}
