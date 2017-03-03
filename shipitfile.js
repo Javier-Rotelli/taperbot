@@ -8,7 +8,7 @@ module.exports = function (shipit) {
 
   shipit.initConfig({
     default: {
-      workspace: '/tmp/edison-gp/backend',
+      workspace: '/tmp/taperbot',
       deployTo: '/home/taperbot/code',
       repositoryUrl: pkg.repository.url,
       branch: 'master',
