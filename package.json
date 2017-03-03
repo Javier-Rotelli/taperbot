@@ -24,7 +24,7 @@
     "js-yaml": "^3.7.0",
     "nodemon": "^1.11.0",
     "request": "^2.57.0",
-    "ws": "^0.7.2"
+    "ws": "2.2.0"
   },
   "devDependencies": {
     "babel-plugin-istanbul": "^4.0.0",
