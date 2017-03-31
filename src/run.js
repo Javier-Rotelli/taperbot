@@ -56,6 +56,14 @@ const startServer = (url) => {
     }))
   })
 
+  emitter.on('startTyping', (message) => {
+    ws.send(JSON.stringify({
+      channel: message.channel,
+      id: nextId(),
+      type: "typing",
+      reply_to : message.id
+    }))
+  })
   initPlugins(conf.plugins, emitter)
 }
 
