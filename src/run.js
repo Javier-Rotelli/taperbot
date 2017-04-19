@@ -50,7 +50,7 @@ const startServer = (url) => {
       return
     }
     console.log('procesando!')
-    sendMessage(ws,{
+    sendMessage(ws, {
       channel: channel,
       id,
       text: content,
@@ -59,24 +59,23 @@ const startServer = (url) => {
   })
 
   emitter.on('startTyping', (message) => {
-    sendMessage(ws,{
+    sendMessage(ws, {
       channel: message.channel,
-      id: nextId(),
-      type: "typing",
-      reply_to : message.id
+      id: getNextId(),
+      type: 'typing',
+      reply_to: message.id
     })
   })
   initPlugins(conf.plugins, emitter)
 }
 
 const sendMessage = (ws, message) => {
-  if(message.id === undefined) {
+  if (message.id === undefined) {
     message.id = getNextId()
   }
   ws.send(JSON.stringify(message))
   resetPing(ws)
 }
-
 
 const initPlugins = (plugins, emitter) => {
   const pluginsFolder = './plugins/'
@@ -108,8 +107,8 @@ const resetPing = (ws) => {
 
 const sendPing = (ws) => () => {
   ws.send(JSON.stringify({
-    "id": getNextId(),
-    "type": "ping"
+    'id': getNextId(),
+    'type': 'ping'
   }))
-  console.log("sent ping")
+  console.log('sent ping')
 }
