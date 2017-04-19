@@ -3,6 +3,7 @@ import request from 'request'
 const EventEmitter = require('events').EventEmitter
 
 import {getConfig} from './config'
+import {getNextId} from './messageUtil'
 
 const conf = getConfig()
 
@@ -19,6 +20,7 @@ const startServer = (url) => {
 
   ws.on('open', () => {
     console.log('Connected')
+    resetPing(ws)
   })
 
   ws.on('error', () => {
@@ -43,29 +45,38 @@ const startServer = (url) => {
     }
   })
 
-  emitter.on('send:message', (content, channel) => {
+  emitter.on('send:message', (content, channel, id) => {
     if (conf.ignoredChannels.includes(channel)) {
       return
     }
     console.log('procesando!')
-    ws.send(JSON.stringify({
+    sendMessage(ws,{
       channel: channel,
-      id: 1,
+      id,
       text: content,
       type: 'message'
-    }))
+    })
   })
 
   emitter.on('startTyping', (message) => {
-    ws.send(JSON.stringify({
+    sendMessage(ws,{
       channel: message.channel,
       id: nextId(),
       type: "typing",
       reply_to : message.id
-    }))
+    })
   })
   initPlugins(conf.plugins, emitter)
 }
+
+const sendMessage = (ws, message) => {
+  if(message.id === undefined) {
+    message.id = getNextId()
+  }
+  ws.send(JSON.stringify(message))
+  resetPing(ws)
+}
+
 
 const initPlugins = (plugins, emitter) => {
   const pluginsFolder = './plugins/'
@@ -89,3 +100,16 @@ request(getUrl(conf.apiToken), function (err, response, body) {
   }
 })
 
+let pingTimer
+const resetPing = (ws) => {
+  clearTimeout(pingTimer)
+  pingTimer = setTimeout(sendPing(ws), 5000)
+}
+
+const sendPing = (ws) => () => {
+  ws.send(JSON.stringify({
+    "id": getNextId(),
+    "type": "ping"
+  }))
+  console.log("sent ping")
+}
