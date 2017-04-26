@@ -1,5 +1,6 @@
 apiToken: thisIsASecretToken
 userId: U3FTH76RZ
+debug: *
 ignoredChannels:
   - C02TUBDTJ #General
   - C052AP8CB #General-es

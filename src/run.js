@@ -1,11 +1,15 @@
 import WebSocket from 'ws'
 import request from 'request'
-const EventEmitter = require('events').EventEmitter
-
+import {EventEmitter} from 'events'
+import createDebug from 'debug'
 import {getConfig} from './config'
 import {getNextId} from './messageUtil'
 
 const conf = getConfig()
+if(conf.debug) {
+  process.env['DEBUG'] = (conf.debug === true)?'*':conf.debug;
+}
+const log = createDebug('taperbot')
 
 const isFromUser = (mess, uid) => mess.user === uid
 const mentionsUser = (mess, uid) => mess.text && mess.text.includes(`<@${uid}>`)
@@ -19,12 +23,12 @@ const startServer = (url) => {
   const emitter = new EventEmitter()
 
   ws.on('open', () => {
-    console.log('Connected')
+    log('Connected')
     resetPing(ws)
   })
 
-  ws.on('error', () => {
-    console.log('Error on Websocket server')
+  ws.on('error', (error) => {
+    log('Error on Websocket server: %o', error)
   })
 
   ws.on('message', (rawMessage) => {
@@ -32,7 +36,7 @@ const startServer = (url) => {
     if (isFromChannels(payload, conf.ignoredChannels)) {
       return
     }
-    console.log(payload)
+    log(payload)
     switch (payload.type) {
       case 'message':
         if (shouldProcess(payload, conf.userId)) {
@@ -49,7 +53,6 @@ const startServer = (url) => {
     if (conf.ignoredChannels.includes(channel)) {
       return
     }
-    console.log('procesando!')
     sendMessage(ws, {
       channel: channel,
       id,
@@ -90,10 +93,11 @@ const getUrl = (apiToken) => 'https://slack.com/api/rtm.start?token=' + apiToken
 
 request(getUrl(conf.apiToken), function (err, response, body) {
   if (!err && response.statusCode === 200) {
-    var res = JSON.parse(body)
+    const res = JSON.parse(body)
     if (res.ok) {
       startServer(res.url)
     } else {
+      console.error("error connecting to slack")
       console.error(body)
     }
   }
@@ -110,5 +114,5 @@ const sendPing = (ws) => () => {
     'id': getNextId(),
     'type': 'ping'
   }))
-  console.log('sent ping')
+  log('sent ping')
 }
