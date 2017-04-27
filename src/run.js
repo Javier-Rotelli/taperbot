@@ -6,10 +6,10 @@ import {getConfig} from './config'
 import {getNextId} from './messageUtil'
 
 const conf = getConfig()
-if(conf.debug) {
-  process.env['DEBUG'] = (conf.debug === true)?'*':conf.debug;
+if (conf.debug) {
+  process.env['DEBUG'] = (conf.debug === true) ? '*' : conf.debug
 }
-const log = createDebug('taperbot')
+const log = createDebug('taperbot:core')
 
 const isFromUser = (mess, uid) => mess.user === uid
 const mentionsUser = (mess, uid) => mess.text && mess.text.includes(`<@${uid}>`)
@@ -69,7 +69,23 @@ const startServer = (url) => {
       reply_to: message.id
     })
   })
-  initPlugins(conf.plugins, emitter)
+
+  emitter.on('web', (method, args, cb) => {
+    const url = `https://slack.com/api/${method}`
+    const qs = {
+      token: conf.apiToken,
+      ...args
+    }
+    log('Web Request Method:', method, 'args', args)
+    request(url, {qs}, (err, resp, body) => {
+      if (err) {
+        cb(err)
+      }
+      cb(null, JSON.parse(body))
+    })
+  })
+
+  initPlugins(conf.plugins, emitter, log)
 }
 
 const sendMessage = (ws, message) => {
@@ -80,12 +96,12 @@ const sendMessage = (ws, message) => {
   resetPing(ws)
 }
 
-const initPlugins = (plugins, emitter) => {
+const initPlugins = (plugins, emitter, log) => {
   const pluginsFolder = './plugins/'
 
   return Object.keys(plugins).map((pluginName) => {
     const pluginConfig = plugins[pluginName]
-    return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter)
+    return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter, log)
   })
 }
 
@@ -97,7 +113,7 @@ request(getUrl(conf.apiToken), function (err, response, body) {
     if (res.ok) {
       startServer(res.url)
     } else {
-      console.error("error connecting to slack")
+      console.error('error connecting to slack')
       console.error(body)
     }
   }
