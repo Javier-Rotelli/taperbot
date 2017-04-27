@@ -12,7 +12,7 @@ export default (config, emitter, log) => {
       log({messageTime, reactionTime})
 
       if (reactionTime > messageTime) {
-        const text = `<@${payload.item.user}> \r\n https://media.giphy.com/media/26uf3DbP1a8nwAw6c/giphy.gif`
+        const text = `<@${payload.user}> \r\n https://media.giphy.com/media/26uf3DbP1a8nwAw6c/giphy.gif`
         emitter.emit('send:message', text, payload.item.channel)
       }
     }

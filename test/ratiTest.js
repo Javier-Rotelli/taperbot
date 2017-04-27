@@ -10,7 +10,7 @@ const log = createDebug('taperbot:core')
 
 const config = {
   channel: 'G06E6NZ89',
-  cook: 'U0XP25ZMJ'
+  cook: 'COOK'
 }
 
 const getReactionPayload = (messageTime, reactionTime) => {
@@ -23,7 +23,7 @@ const getReactionPayload = (messageTime, reactionTime) => {
       ts: messageTime.getTime() / 1000
     },
     reaction: 'the_horns::skin-tone-3',
-    item_user: 'U0XP25ZMJ',
+    item_user: 'COOK',
     event_ts: reactionTime.getTime() / 1000,
     ts: reactionTime.getTime() / 1000
   }
@@ -51,6 +51,18 @@ describe('Test rati plugin', function () {
     rati(config, emitter, log)
     emitter.emit('reaction:added', getReactionPayload(new Date(2017, 3, 2), new Date(2017, 3, 2)))
     sinon.assert.notCalled(spy)
+    done()
+  })
+
+  it('should mention the offending user', function (done) {
+    const emitter = new EventEmitter()
+    const spy = sinon.spy()
+
+    emitter.on('send:message', spy)
+
+    rati(config, emitter, log)
+    emitter.emit('reaction:added', getReactionPayload(new Date(2017, 3, 2), new Date(2017, 3, 3)))
+    sinon.assert.calledWith(spy, sinon.match('<@U0XP25ZMJ>'), 'G06E6NZ89')
     done()
   })
 })
