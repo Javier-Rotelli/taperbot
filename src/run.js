@@ -85,7 +85,7 @@ const startServer = (url) => {
     })
   })
 
-  initPlugins(conf.plugins, emitter, log)
+  initPlugins(conf.plugins, emitter)
 }
 
 const sendMessage = (ws, message) => {
@@ -96,12 +96,13 @@ const sendMessage = (ws, message) => {
   resetPing(ws)
 }
 
-const initPlugins = (plugins, emitter, log) => {
+const initPlugins = (plugins, emitter) => {
   const pluginsFolder = './plugins/'
 
   return Object.keys(plugins).map((pluginName) => {
+    log(`Iniciando plugin ${pluginName}`)
     const pluginConfig = plugins[pluginName]
-    return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter, log)
+    return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter, createDebug(`taperbot:${pluginName}`))
   })
 }
 
