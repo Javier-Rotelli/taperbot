@@ -40,6 +40,7 @@
     "shipit-pm2": "0.0.4",
     "shipit-shared": "^4.4.2",
     "should": "^4.4.4",
+    "sinon": "^2.1.0",
     "standard": "^8.6.0"
   },
   "optionalDependencies": {
