@@ -17,6 +17,11 @@ export default (config, emitter) => {
       case 'channels':
         log('listando channels')
         response = await getChannels(emitter)
+        break
+      case 'groups':
+        log('listando grupos')
+        response = await getGroups(emitter)
+        break
     }
 
     if (response !== null) {
@@ -54,6 +59,23 @@ const getChannels = async (emitter) => {
         resolve(response.channels
         .map((member) => `id: ${member.id}, name: ${member.name}`)
         .join('\n'))
+      })
+  })
+}
+
+const getGroups = async (emitter) => {
+  return new Promise((resolve, reject) => {
+    emitter.emit('web', 'groups.list',
+      {
+        exclude_archived: true
+      },
+      (err, response) => {
+        if (err) {
+          reject(err)
+        }
+        resolve(response.groups
+          .map((member) => `id: ${member.id}, name: ${member.name}`)
+          .join('\n'))
       })
   })
 }
