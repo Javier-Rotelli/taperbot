@@ -126,4 +126,5 @@ const sendPing = (ws) => () => {
     'type': 'ping'
   }))
   log('sent ping')
+  resetPing(ws)
 }
