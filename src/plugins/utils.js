@@ -1,8 +1,6 @@
 import commandParser from '../commandParser'
-import createDebug from 'debug'
-const log = createDebug('taperbot:utils')
 
-export default (config, emitter) => {
+export default (config, emitter, log) => {
   const processMessage = async (message) => {
     const command = commandParser(message.text)
     if (command === null) {

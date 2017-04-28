@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 import chai from 'chai'
 
-import {shouldProcess} from '../src/run'
+import {shouldProcess} from '../src/messageUtil'
 
 const expect = chai.expect
 

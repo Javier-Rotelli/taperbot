@@ -3,20 +3,14 @@ import request from 'request'
 import {EventEmitter} from 'events'
 import createDebug from 'debug'
 import {getConfig} from './config'
-import {getNextId} from './messageUtil'
+import {getNextId, isFromChannels, shouldProcess} from './messageUtil'
+import adminPlugin from './plugins/admin'
 
 const conf = getConfig()
 if (conf.debug) {
   process.env['DEBUG'] = (conf.debug === true) ? '*' : conf.debug
 }
 const log = createDebug('taperbot:core')
-
-const isFromUser = (mess, uid) => mess.user === uid
-const mentionsUser = (mess, uid) => mess.text && mess.text.includes(`<@${uid}>`)
-const isFromChannels = (mess, channels) => channels.includes(mess.channel)
-
-export const shouldProcess = (message, userId) => !isFromUser(message, userId) &&
-                                                  mentionsUser(message, userId)
 
 const startServer = (url) => {
   const ws = new WebSocket(url)
@@ -103,7 +97,7 @@ const initPlugins = (plugins, emitter) => {
     log(`Iniciando plugin ${pluginName}`)
     const pluginConfig = plugins[pluginName]
     return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter, createDebug(`taperbot:${pluginName}`))
-  })
+  }).concat([adminPlugin(conf, emitter, createDebug('taperbot:admin'))])
 }
 
 const getUrl = (apiToken) => 'https://slack.com/api/rtm.start?token=' + apiToken
