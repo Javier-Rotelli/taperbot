@@ -44,6 +44,8 @@
     "standard": "^8.6.0"
   },
   "optionalDependencies": {
-    "google-spreadsheet": "^2.0.3"
+    "es6-promisify": "^5.0.0",
+    "google-spreadsheet": "^2.0.3",
+    "text-table": "^0.2.0"
   }
 }
