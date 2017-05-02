@@ -1,14 +1,20 @@
+/* eslint-disable */
+/* el linter se queja y con razon, esto no es una buena idea */
 export default (config, emitter) => {
   emitter.on('received:message', (message) => {
-    if(!message.text.includes('code: ')) {
+    if (!message.text.includes('code: ')) {
       return
     }
-    const code = message.text.match(/\`([^\`]*)\`/)[1]
     try {
-      eval(code)
+      const code = message.text.match(/\`([^\`]*)\`/)[1]
+      {
+        const require = null
+        const process = null
+        const text = eval(code).toString()
+        emitter.emit('send:message', text, message.channel)
+      }
     } catch (ex) {
       emitter.emit('send:message', ex.message, message.channel)
     }
-
   })
 }
