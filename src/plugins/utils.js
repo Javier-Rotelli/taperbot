@@ -1,4 +1,5 @@
 import commandParser from '../commandParser'
+import { getChannels, getGroups, getUsers } from '../slackUtils'
 
 export default (config, emitter, log) => {
   const processMessage = async (message) => {
@@ -10,15 +11,21 @@ export default (config, emitter, log) => {
     switch (command.command) {
       case 'users':
         log('listando usuarios')
-        response = await getUsers(emitter)
+        response = (await getUsers(emitter))
+          .map((member) => `id: ${member.id}, name: ${member.name}`)
+          .join('\n')
         break
       case 'channels':
         log('listando channels')
-        response = await getChannels(emitter)
+        response = (await getChannels(emitter))
+          .map((member) => `id: ${member.id}, name: ${member.name}`)
+          .join('\n')
         break
       case 'groups':
         log('listando grupos')
-        response = await getGroups(emitter)
+        response = (await getGroups(emitter))
+          .map((member) => `id: ${member.id}, name: ${member.name}`)
+          .join('\n')
         break
     }
 
@@ -28,52 +35,4 @@ export default (config, emitter, log) => {
   }
 
   emitter.on('received:message', processMessage)
-}
-
-const getUsers = async (emitter) => {
-  return new Promise((resolve, reject) => {
-    emitter.emit('web', 'users.list', {}, (err, response) => {
-      if (err) {
-        reject(err)
-      }
-      resolve(response.members
-        .map((member) => `id: ${member.id}, name: ${member.name}`)
-        .join('\n'))
-    })
-  })
-}
-
-const getChannels = async (emitter) => {
-  return new Promise((resolve, reject) => {
-    emitter.emit('web', 'channels.list',
-      {
-        exclude_archived: true,
-        exclude_members: true
-      },
-      (err, response) => {
-        if (err) {
-          reject(err)
-        }
-        resolve(response.channels
-        .map((member) => `id: ${member.id}, name: ${member.name}`)
-        .join('\n'))
-      })
-  })
-}
-
-const getGroups = async (emitter) => {
-  return new Promise((resolve, reject) => {
-    emitter.emit('web', 'groups.list',
-      {
-        exclude_archived: true
-      },
-      (err, response) => {
-        if (err) {
-          reject(err)
-        }
-        resolve(response.groups
-          .map((member) => `id: ${member.id}, name: ${member.name}`)
-          .join('\n'))
-      })
-  })
 }
