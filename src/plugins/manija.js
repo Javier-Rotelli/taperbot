@@ -85,14 +85,14 @@ export const getTable = async (sheet, ligaBuscada, log) => {
   return tabla
 }
 
-let usuarios = undefined;
+let usuarios
 const getUsersDict = async (emitter) => {
-  if(usuarios === undefined) {
+  if (usuarios === undefined) {
     const users = await getUsers(emitter)
     usuarios = users.reduce((dict, curr) => {
       dict[curr.id] = curr.name
       return dict
-    },{})
+    }, {})
   }
   return usuarios
 }
@@ -107,10 +107,10 @@ const quienMeFalta = async (sheet, user, log) => {
     'return-empty': true
   }).then((cells) => {
     const playerIndex = cells.findIndex((cell) => cell.value.trim() === `@${user}` && cell.col === 1)
-    if(playerIndex === -1) {
+    if (playerIndex === -1) {
       return 'y vos quien sos?'
     }
     log(cells[playerIndex + 2].value)
-    return cells[playerIndex + 2].value + " Vengan a jugar amigos de la federal"//.split(",").reduce((str, curr) => str + curr.trim(), "")
+    return cells[playerIndex + 2].value + ' Vengan a jugar amigos de la federal'// .split(",").reduce((str, curr) => str + curr.trim(), "")
   })
 }
