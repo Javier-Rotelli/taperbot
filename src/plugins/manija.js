@@ -3,6 +3,7 @@ import promisify from 'es6-promisify'
 import table from 'text-table'
 
 import commandParser from './../commandParser'
+import { getUsers } from '../slackUtils'
 
 export default (config, emitter, log) => {
   const doc = new GoogleSpreadsheet('1fW46QXKO4XDd-L8hoYFR30AzzVVDe4mL1xhZthbDgtI')
@@ -24,6 +25,10 @@ const processMessage = (emitter, sheet, log) => async (message) => {
   switch (command.command) {
     case 'tabla':
       response = await getTable(sheet, command.text, log)
+      break
+    case 'manijeala':
+      const users = await getUsersDict(emitter)
+      response = await quienMeFalta(sheet, users[message.user], log)
       break
   }
 
@@ -59,7 +64,7 @@ export const getTable = async (sheet, ligaBuscada, log) => {
     }).then((cells) => {
       const start = cells.find((cell) => cell.value === liga).row
       const end = cells.slice(start).find((cell) => cell.value === '').row
-      log('start:', start, 'end:', end)
+
       return {
         'min-row': start + 2,
         'max-row': end,
@@ -78,4 +83,34 @@ export const getTable = async (sheet, ligaBuscada, log) => {
   })
 
   return tabla
+}
+
+let usuarios = undefined;
+const getUsersDict = async (emitter) => {
+  if(usuarios === undefined) {
+    const users = await getUsers(emitter)
+    usuarios = users.reduce((dict, curr) => {
+      dict[curr.id] = curr.name
+      return dict
+    },{})
+  }
+  return usuarios
+}
+
+const quienMeFalta = async (sheet, user, log) => {
+  const getCells = promisify(sheet.getCells, sheet)
+  return await getCells({
+    'min-row': 1,
+    'max-row': 50,
+    'min-col': 1,
+    'max-col': 3,
+    'return-empty': true
+  }).then((cells) => {
+    const playerIndex = cells.findIndex((cell) => cell.value.trim() === `@${user}` && cell.col === 1)
+    if(playerIndex === -1) {
+      return 'y vos quien sos?'
+    }
+    log(cells[playerIndex + 2].value)
+    return cells[playerIndex + 2].value + " Vengan a jugar amigos de la federal"//.split(",").reduce((str, curr) => str + curr.trim(), "")
+  })
 }
