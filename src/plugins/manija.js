@@ -22,9 +22,12 @@ const processMessage = (emitter, sheet, log) => async (message) => {
     return
   }
   let response = null
+
   switch (command.command) {
     case 'tabla':
-      response = await getTable(sheet, command.text, log)
+      const text = command.text || ''
+      const params = text.split(' ')
+      response = await getTable(sheet, params, log)
       break
     case 'manijeala':
       const users = await getUsersDict(emitter)
@@ -44,7 +47,10 @@ const ligas = {
   'PARALIGA': {}
 }
 
-export const getTable = async (sheet, ligaBuscada, log) => {
+export const getTable = async (sheet, params, log) => {
+  const ligaBuscada = params[0] || ''
+  const doMention = !!params[1]
+
   const liga = ligaBuscada.trim().toUpperCase()
   const categoria = ligas[liga]
 
@@ -76,9 +82,16 @@ export const getTable = async (sheet, ligaBuscada, log) => {
   }
   const range = (n) => Array.apply(null, new Array(n)).map((x, i) => i)
 
+  const cellValue = cell => {
+    if (doMention) {
+      return cell.value
+    }
+    return cell.value.substr(1)
+  }
+
   const tabla = await getCells(categoria.tabla).then((cells) => {
     const rows = range(Math.ceil(cells.length / 6)).map((x, i) => cells.slice(i * 6, i * 6 + 6))
-    log(table(rows.map(row => row.map(cell => cell.value))))
+    log(table(rows.map(row => row.map(cellValue))))
     return '```' + table(rows.map(row => row.map(cell => cell.value))) + '```'
   })
 
