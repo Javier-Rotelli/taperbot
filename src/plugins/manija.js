@@ -26,7 +26,7 @@ const processMessage = (emitter, sheet, log) => async (message) => {
   switch (command.command) {
     case 'tabla':
       const text = command.text || ''
-      const params = text.split(' ')
+      const params = text.trim().split(' ')
       response = await getTable(sheet, params, log)
       break
     case 'manijeala':
