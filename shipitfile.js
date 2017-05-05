@@ -2,7 +2,8 @@ var pkg = require('./package.json')
 
 module.exports = function (shipit) {
   require('shipit-deploy')(shipit)
-  require('shipit-npm')(shipit)
+  require('shipit-shared')(shipit)
+  require('shipit-yarn')(shipit)
   require('shipit-pm2')(shipit)
   var config = require('./shipitfile.config.json')
 
