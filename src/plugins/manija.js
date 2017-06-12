@@ -16,13 +16,33 @@ export default (config, emitter, log) => {
   })
 }
 
+const easterEgg = (emitter, channel) => {
+  const messages = [
+    'Buscando proveedor...',
+    'Llamando...',
+    'Realizando pedido...',
+    'Total: $800. llega en ~30 minutos'
+  ]
+  const sendmsg = () => {
+    const msg = messages.shift()
+    emitter.emit('send:message', msg, channel)
+    if (messages.length > 0) {
+      setTimeout(sendmsg, 2000)
+    }
+  }
+  sendmsg()
+}
 const processMessage = (emitter, sheet, log) => async (message) => {
   const command = commandParser(message.text)
   if (command === null) {
     return
   }
-  let response = null
+  if (message.text.includes('tabla de quesos')) {
+    easterEgg(emitter, message.channel)
+    return
+  }
 
+  let response = null
   switch (command.command) {
     case 'tabla':
       const text = command.text || ''
@@ -49,8 +69,7 @@ const ligas = {
 
 export const getTable = async (sheet, params, log) => {
   const ligaBuscada = params[0] || ''
-  const doMention = !!params[1]
-
+  const extendida = params.indexOf('extendida') !== -1
   const liga = ligaBuscada.trim().toUpperCase()
   const categoria = ligas[liga]
 
@@ -75,24 +94,20 @@ export const getTable = async (sheet, params, log) => {
         'min-row': start + 2,
         'max-row': end,
         'min-col': 9,
-        'max-col': 14,
+        'max-col': 20,
         'return-empty': true
       }
     })
   }
   const range = (n) => Array.apply(null, new Array(n)).map((x, i) => i)
 
-  const cellValue = cell => {
-    if (doMention) {
-      return cell.value
-    }
-    return cell.value.substr(1)
-  }
-
   const tabla = await getCells(categoria.tabla).then((cells) => {
-    const rows = range(Math.ceil(cells.length / 6)).map((x, i) => cells.slice(i * 6, i * 6 + 6))
-    log(table(rows.map(row => row.map(cellValue))))
-    return '```' + table(rows.map(row => row.map(cell => cell.value))) + '```'
+    const rows = range(Math.ceil(cells.length / 11)).map((x, i) => cells.slice(i * 12, i * 12 + 12))
+    if (extendida) {
+      return '```' + table(rows.map(row => row.map(cell => cell.value))) + '```'
+    } else {
+      return '```' + table(rows.map(row => row.slice(0, 6).map(cell => cell.value))) + '```'
+    }
   })
 
   return tabla
