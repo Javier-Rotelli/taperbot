@@ -164,7 +164,7 @@ const getLetsPlayFriendlyMessage = function (rivals) {
   }
   const singleRival = getSingleRival(rivals)
   const messages = isSingleRival(rivals)
-    ? (customSingleRivalMessages.includes(singleRival) || Math.random() > 0.5
+    ? (!customSingleRivalMessages.includes(singleRival) || Math.random() > 0.5
       ? singleRivalMessages
       : customSingleRivalMessages[singleRival])
     : multiRivalsMessages
