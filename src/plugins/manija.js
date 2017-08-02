@@ -143,7 +143,7 @@ const quienMeFalta = async (sheet, user, log) => {
   })
 }
 
-const getLetsPlayFriendlyMessage = function (rivals) {
+export const getLetsPlayFriendlyMessage = function (rivals) {
   const multiRivalsMessages = [
     '<rivals>, vengan a jugar amigos de la federal.',
     '<rivals>, bajen ya o pido :escritorio:.',
@@ -164,7 +164,7 @@ const getLetsPlayFriendlyMessage = function (rivals) {
   }
   const singleRival = getSingleRival(rivals)
   const messages = isSingleRival(rivals)
-    ? (!customSingleRivalMessages.includes(singleRival) || Math.random() > 0.5
+    ? (!Object.keys(customSingleRivalMessages).includes(singleRival) || Math.random() > 0.5
       ? singleRivalMessages
       : customSingleRivalMessages[singleRival])
     : multiRivalsMessages
