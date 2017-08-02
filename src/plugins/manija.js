@@ -148,31 +148,31 @@ const getLetsPlayFriendlyMessage = function (rivals) {
     '<rivals>, vengan a jugar amigos de la federal.',
     '<rivals>, bajen ya o pido :escritorio:.',
     '<rivals> vengan de a uno que me los como crudos.',
-    '<rivals>, les llegó la hora.',,
-    '<rivals>, vengan a perder.',
+    '<rivals>, les llegó la hora.',
+    '<rivals>, vengan a perder.'
   ]
   const singleRivalMessages = [
     '<rivals> dale que me quedás solo vos',
     'Te voy a comer crudo <rivals>',
     'Si no te la bancás ya mismo pido :escritorio:, <rivals>',
-    '<rivals> en cinco abajo o te pido los puntos. :escritorio:',
+    '<rivals> en cinco abajo o te pido los puntos. :escritorio:'
   ]
   const customSingleRivalMessages = {
     'aspero': [
-      '<rivals> prepará los gluteos y bajá.',
+      '<rivals> prepará los gluteos y bajá.'
     ]
   }
   const singleRival = getSingleRival(rivals)
-  const messages =  isSingleRival(rivals) ?
-    (customSingleRivalMessages.includes(singleRival) || Math.random() > 0.5 ?
-      singleRivalMessages :
-      customSingleRivalMessages[singleRival]) :
-    multiRivalsMessages
-  return messages[Math.floor(Math.random() * messages.length)].replace("<rivals>", rivals)
+  const messages = isSingleRival(rivals)
+    ? (customSingleRivalMessages.includes(singleRival) || Math.random() > 0.5
+      ? singleRivalMessages
+      : customSingleRivalMessages[singleRival])
+    : multiRivalsMessages
+  return messages[Math.floor(Math.random() * messages.length)].replace('<rivals>', rivals)
 }
 
 const isSingleRival = function (rivals) {
-  return rivals.indexOf(',') == -1
+  return rivals.indexOf(',') === -1
 }
 
 const getSingleRival = function (rivals) {
