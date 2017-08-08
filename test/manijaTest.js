@@ -30,5 +30,4 @@ describe('Test getLetsPlayFriendlyMessage', function () {
     expect(result).to.include('gluteos')
     done()
   })
-
 })
