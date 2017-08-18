@@ -164,7 +164,7 @@ export const getLetsPlayFriendlyMessage = function (rivals) {
   }
   const singleRival = getSingleRival(rivals)
   const messages = isSingleRival(rivals)
-    ? (!Object.keys(customSingleRivalMessages).includes(singleRival) || Math.random() > 0.5
+    ? (!Object.keys(customSingleRivalMessages).indexOf(singleRival) > -1 || Math.random() > 0.5
       ? singleRivalMessages
       : customSingleRivalMessages[singleRival])
     : multiRivalsMessages
