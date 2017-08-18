@@ -50,8 +50,7 @@ const processMessage = (emitter, sheet, log) => async (message) => {
       response = await getTable(sheet, params, log)
       break
     case 'manijeala':
-      const users = await getUsersDict(emitter)
-      response = await quienMeFalta(sheet, users[message.user], log)
+      response = await quienMeFalta(sheet, message.user, log)
       break
   }
 
@@ -127,19 +126,33 @@ const getUsersDict = async (emitter) => {
 
 const quienMeFalta = async (sheet, user, log) => {
   const getCells = promisify(sheet.getCells, sheet)
-  return await getCells({
-    'min-row': 1,
-    'max-row': 50,
-    'min-col': 1,
-    'max-col': 3,
-    'return-empty': true
-  }).then((cells) => {
-    const playerIndex = cells.findIndex((cell) => cell.value.trim() === `@${user}` && cell.col === 1)
+  return await Promise.all([
+    getCells({ // Lista de usuarios
+      'min-row': 2,
+      'max-row': 60,
+      'min-col': 25,
+      'max-col': 26,
+      'return-empty': true
+    }),
+      getCells({ // Partidos pendientes
+      'min-row': 1,
+      'max-row': 50,
+      'min-col': 1,
+      'max-col': 3,
+      'return-empty': true
+    })
+  ]).then(([users, pendingMatches])=> {
+    const userIndex = users.findIndex((cell) => cell.value.trim() === user && cell.col === 25)
+    if (userIndex === -1) {
+      return 'y vos quien sos?'
+    }
+    const username = users[userIndex + 1].value
+    const playerIndex = pendingMatches.findIndex((cell) => cell.value.trim() === username && cell.col === 1)
     if (playerIndex === -1) {
       return 'y vos quien sos?'
     }
-    log(cells[playerIndex + 2].value)
-    return getLetsPlayFriendlyMessage(cells[playerIndex + 2].value)// .split(",").reduce((str, curr) => str + curr.trim(), "")
+    log(pendingMatches[playerIndex + 2].value)
+    return getLetsPlayFriendlyMessage(pendingMatches[playerIndex + 2].value)
   })
 }
 
