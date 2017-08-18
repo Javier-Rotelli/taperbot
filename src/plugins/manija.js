@@ -3,7 +3,6 @@ import promisify from 'es6-promisify'
 import table from 'text-table'
 
 import commandParser from './../commandParser'
-import { getUsers } from '../slackUtils'
 
 export default (config, emitter, log) => {
   const doc = new GoogleSpreadsheet('1fW46QXKO4XDd-L8hoYFR30AzzVVDe4mL1xhZthbDgtI')
@@ -112,18 +111,6 @@ export const getTable = async (sheet, params, log) => {
   return tabla
 }
 
-let usuarios
-const getUsersDict = async (emitter) => {
-  if (usuarios === undefined) {
-    const users = await getUsers(emitter)
-    usuarios = users.reduce((dict, curr) => {
-      dict[curr.id] = curr.name
-      return dict
-    }, {})
-  }
-  return usuarios
-}
-
 const quienMeFalta = async (sheet, user, log) => {
   const getCells = promisify(sheet.getCells, sheet)
   return await Promise.all([
@@ -134,14 +121,14 @@ const quienMeFalta = async (sheet, user, log) => {
       'max-col': 26,
       'return-empty': true
     }),
-      getCells({ // Partidos pendientes
+    getCells({ // Partidos pendientes
       'min-row': 1,
       'max-row': 50,
       'min-col': 1,
       'max-col': 3,
       'return-empty': true
     })
-  ]).then(([users, pendingMatches])=> {
+  ]).then(([users, pendingMatches]) => {
     const userIndex = users.findIndex((cell) => cell.value.trim() === user && cell.col === 25)
     if (userIndex === -1) {
       return 'y vos quien sos?'
