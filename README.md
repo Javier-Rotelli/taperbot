@@ -10,7 +10,7 @@ To start the bot run
 npm run
 ```
 
-Make sure you first change the api token in config.yml file with an apropriated token
+Make sure you first change the [api token](https://api.slack.com/custom-integrations/legacy-tokens) in config.yml file with an apropriated token.
 
 # To Test it
 
