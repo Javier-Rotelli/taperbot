@@ -11,6 +11,7 @@ if (conf.debug) {
   process.env['DEBUG'] = (conf.debug === true) ? '*' : conf.debug
 }
 const log = createDebug('taperbot:core')
+const devLog = createDebug('taperbot:core:dev')
 
 const startServer = (url) => {
   const ws = new WebSocket(url)
@@ -83,6 +84,11 @@ const startServer = (url) => {
 }
 
 const sendMessage = (ws, message) => {
+  if (process.env.NODE_ENV !== 'production') {
+    devLog('Message to send: %O', message)
+    return
+  }
+
   if (message.id === undefined) {
     message.id = getNextId()
   }
