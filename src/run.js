@@ -5,6 +5,7 @@ import createDebug from 'debug'
 import {getConfig} from './config'
 import {getNextId, isFromChannels, shouldProcess} from './messageUtil'
 import adminPlugin from './plugins/admin'
+import { getDbInstance } from './db'
 
 const conf = getConfig()
 if (conf.debug) {
@@ -80,7 +81,7 @@ const startServer = (url) => {
     })
   })
 
-  initPlugins(conf.plugins, emitter)
+  initPlugins(conf.plugins, emitter, getDbInstance(conf.dbPath))
 }
 
 const sendMessage = (ws, message) => {
@@ -96,13 +97,13 @@ const sendMessage = (ws, message) => {
   resetPing(ws)
 }
 
-const initPlugins = (plugins, emitter) => {
+const initPlugins = (plugins, emitter, dbGetter) => {
   const pluginsFolder = './plugins/'
 
   return Object.keys(plugins).map((pluginName) => {
     log(`Iniciando plugin ${pluginName}`)
     const pluginConfig = plugins[pluginName]
-    return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter, createDebug(`taperbot:${pluginName}`))
+    return require(`${pluginsFolder}${pluginName}`).default(pluginConfig, emitter, createDebug(`taperbot:${pluginName}`), dbGetter(pluginName))
   }).concat([adminPlugin(conf, emitter, createDebug('taperbot:admin'))])
 }
 

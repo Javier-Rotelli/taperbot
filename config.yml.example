@@ -2,6 +2,7 @@ owner:
 apiToken: thisIsASecretToken
 userId: U3FTH76RZ
 debug: true
+dbPath: ./db/
 ignoredChannels:
   - C02TUBDTJ #General
   - C052AP8CB #General-es
