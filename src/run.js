@@ -6,6 +6,7 @@ import {getConfig} from './config'
 import {getNextId, isFromChannels, shouldProcess} from './messageUtil'
 import adminPlugin from './plugins/admin'
 import eventTypes from './eventTypes'
+import { getFromAPI, postToAPI } from './slackWeb'
 
 const conf = getConfig()
 if (conf.debug) {
@@ -69,20 +70,9 @@ const startServer = (url) => {
     })
   })
 
-  emitter.on(eventTypes.OUT.webGet, (method, args, cb) => {
-    const url = `https://slack.com/api/${method}`
-    const qs = {
-      token: conf.apiToken,
-      ...args
-    }
-    log('Web Request Method:', method, 'args', args)
-    request(url, {qs}, (err, resp, body) => {
-      if (err) {
-        cb(err)
-      }
-      cb(null, JSON.parse(body))
-    })
-  })
+  emitter.on(eventTypes.OUT.webGet, getFromAPI(conf, log))
+
+  emitter.on(eventTypes.OUT.webPost, postToAPI(conf, log))
 
   initPlugins(conf.plugins, emitter)
 }
