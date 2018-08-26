@@ -1,6 +1,8 @@
+import eventTypes from './eventTypes'
+
 export const getUsers = async (emitter) => {
   return new Promise((resolve, reject) => {
-    emitter.emit('web', 'users.list', {}, (err, response) => {
+    emitter.emit(eventTypes.OUT.webGet, 'users.list', {}, (err, response) => {
       if (err) {
         reject(err)
       }
@@ -11,7 +13,7 @@ export const getUsers = async (emitter) => {
 
 export const getChannels = async (emitter) => {
   return new Promise((resolve, reject) => {
-    emitter.emit('web', 'channels.list',
+    emitter.emit(eventTypes.OUT.webGet, 'channels.list',
       {
         exclude_archived: true,
         exclude_members: true
@@ -27,7 +29,7 @@ export const getChannels = async (emitter) => {
 
 export const getGroups = async (emitter) => {
   return new Promise((resolve, reject) => {
-    emitter.emit('web', 'groups.list',
+    emitter.emit(eventTypes.OUT.webGet, 'groups.list',
       {
         exclude_archived: true
       },
