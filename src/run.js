@@ -5,6 +5,7 @@ import createDebug from 'debug'
 import {getConfig} from './config'
 import {getNextId, isFromChannels, shouldProcess} from './messageUtil'
 import adminPlugin from './plugins/admin'
+import eventTypes from './eventTypes'
 
 const conf = getConfig()
 if (conf.debug) {
@@ -35,16 +36,19 @@ const startServer = (url) => {
     switch (payload.type) {
       case 'message':
         if (shouldProcess(payload, conf.userId)) {
-          emitter.emit('received:message', payload)
+          emitter.emit(eventTypes.IN.receivedMessage, payload)
         }
         break
       case 'reaction_added':
-        emitter.emit('reaction:added', payload)
+        emitter.emit(eventTypes.IN.reactionAdded, payload)
+        break
+      case 'member_left_channel':
+        emitter.emit(eventTypes.IN.memberLeftChannel, payload)
         break
     }
   })
 
-  emitter.on('send:message', (content, channel, id) => {
+  emitter.on(eventTypes.OUT.sendMessage, (content, channel, id) => {
     if (conf.ignoredChannels.includes(channel)) {
       return
     }
@@ -56,7 +60,7 @@ const startServer = (url) => {
     })
   })
 
-  emitter.on('startTyping', (message) => {
+  emitter.on(eventTypes.OUT.startTyping, (message) => {
     sendMessage(ws, {
       channel: message.channel,
       id: getNextId(),
@@ -65,7 +69,7 @@ const startServer = (url) => {
     })
   })
 
-  emitter.on('web', (method, args, cb) => {
+  emitter.on(eventTypes.OUT.webGet, (method, args, cb) => {
     const url = `https://slack.com/api/${method}`
     const qs = {
       token: conf.apiToken,
