@@ -38,8 +38,7 @@ const startServer = (url) => {
       case 'message':
         if (shouldProcess(payload, conf.userId)) {
           emitter.emit(eventTypes.IN.receivedMessage, payload)
-        }
-        else {
+        } else {
           emitter.emit(eventTypes.IN.receivedOtherMessage, payload)
         }
         break
