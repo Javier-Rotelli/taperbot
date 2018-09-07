@@ -4,6 +4,10 @@ import fs from 'fs'
 
 const reactionsFile = 'data/reactions.json'
 
+function splitWords (text) {
+  return (text || '').split(/[,.\s?¿¡!\\/"'`*+-;_=()&$|@#[\]]+/gi)
+}
+
 export default (config, emitter, debug) => {
   let allReactions = {}
   if (fs.existsSync(reactionsFile)) {
@@ -21,13 +25,13 @@ export default (config, emitter, debug) => {
       })
       emitter.emit('send:message', description, message.channel)
     } else if (command.text) {
-      let components = command.text.split(' ')
+      let components = splitWords(command.text)
       let posibleReaction = components[components.length - 1]
       if (posibleReaction.indexOf(':', 0) === 0 && posibleReaction.indexOf(':', posibleReaction.length - 1) !== -1) {
         let reaction = posibleReaction.substring(1, posibleReaction.length - 1)
         for (let i = 0; i < components.length - 1; i++) {
           // agregamos/quitamos la reaction para cada palabrita
-          let word = components[i]
+          let word = components[i].toLowerCase()
           if (!word) {
             continue
           }
@@ -56,10 +60,10 @@ export default (config, emitter, debug) => {
     }
   })
   emitter.on(eventTypes.IN.receivedOtherMessage, (payload) => {
-    let words = (payload.text || '').split(' ')
+    let words = new Set(splitWords(payload.text))
     let reactions = new Set()
     words.forEach(function (item) {
-      let r = allReactions[item] || []
+      let r = allReactions[item.toLowerCase()] || []
       r.forEach(function (reaction) {
         reactions.add(reaction)
       })
