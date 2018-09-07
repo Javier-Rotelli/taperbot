@@ -38,6 +38,8 @@ const startServer = (url) => {
       case 'message':
         if (shouldProcess(payload, conf.userId)) {
           emitter.emit(eventTypes.IN.receivedMessage, payload)
+        } else {
+          emitter.emit(eventTypes.IN.receivedOtherMessage, payload)
         }
         break
       case 'reaction_added':

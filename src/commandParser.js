@@ -1,5 +1,5 @@
 export default text => {
-  const commandParserRegex = /<@[^>]*> *\/([a-z]*)(.*)/i
+  const commandParserRegex = /<@[^>]*> *\/([a-z]*)(?:$|\s*)(.*)/i
   const regexResult = commandParserRegex.exec(text)
 
   if (regexResult === null) {

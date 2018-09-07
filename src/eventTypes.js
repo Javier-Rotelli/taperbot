@@ -1,6 +1,7 @@
 export default {
   IN: {
     receivedMessage: 'received:message',
+    receivedOtherMessage: 'received:other_message',
     reactionAdded: 'reaction:added',
     memberLeftChannel: 'member:left_channel'
   },

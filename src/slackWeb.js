@@ -7,7 +7,7 @@ export const getFromAPI = (conf, log) => (method, args, cb) => {
     ...args
   }
   log('Web Request Method:', method, 'args', args)
-  request(url, {qs, json:true}, handleResponse(cb))
+  request(url, {qs, json: true}, handleResponse(cb))
 }
 
 export const postToAPI = (conf, log) => (method, args, cb) => {
