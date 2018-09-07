@@ -11,7 +11,7 @@ describe('Test commandParser', function () {
     const result = commandParser(text)
 
     expect(result.command).to.be.equal('testCommand')
-    expect(result.text).to.be.equal(' asd asd')
+    expect(result.text).to.be.equal('asd asd')
     done()
   })
 
