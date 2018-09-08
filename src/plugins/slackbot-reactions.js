@@ -4,8 +4,40 @@ import fs from 'fs'
 
 const reactionsFile = 'data/reactions.json'
 
+const userRegex = /<@[^>]*>/gi
+const splitRegex = /[,.\s?¿¡!\\/"'`*+\-;_=()&$|@#[\]]+/gi
 function splitWords (text) {
-  return (text || '').split(/[,.\s?¿¡!\\/"'`*+-;_=()&$|@#[\]]+/gi)
+  text = text || ''
+  let usernames = userRegex.exec(text) || []
+  return text.replace(userRegex, ' ').split(splitRegex).concat(usernames)
+}
+function flatMap (array, callback) {
+  return array.reduce((acc, x) => acc.concat(callback(x)), [])
+}
+
+function reactTo (allReactions, words, emitter, ts, channel) {
+  // buscar reactions
+  let reactions = new Set(flatMap(words, item => allReactions[item.toLowerCase()] || []))
+  // mezclar reactions
+  let reactionsToAdd = []
+  reactions.forEach(function (reaction) {
+    let position = Math.floor(Math.random() * (reactionsToAdd.length + 1))
+    reactionsToAdd.splice(position, 0, reaction)
+  })
+  // recortar algunas
+  reactionsToAdd.splice(0, Math.floor(Math.random() * (reactionsToAdd.length - 1)))
+  // enviar
+  reactionsToAdd.forEach(function (reaction, index) {
+    setTimeout(function () {
+      emitter.emit(eventTypes.OUT.webPost, 'reactions.add',
+        {
+          name: reaction,
+          channel: channel,
+          timestamp: ts
+        },
+        (_) => {})
+    }, (Math.random() + index) * 1500)
+  })
 }
 
 export default (config, emitter, debug) => {
@@ -61,31 +93,13 @@ export default (config, emitter, debug) => {
   })
   emitter.on(eventTypes.IN.receivedOtherMessage, (payload) => {
     let words = new Set(splitWords(payload.text))
-    let reactions = new Set()
-    words.forEach(function (item) {
-      let r = allReactions[item.toLowerCase()] || []
-      r.forEach(function (reaction) {
-        reactions.add(reaction)
-      })
-    })
-    let reactionsToAdd = []
-    reactions.forEach(function (reaction) {
-      let position = Math.floor(Math.random() * (reactionsToAdd.length + 1))
-      reactionsToAdd.splice(position, 0, reaction)
-    })
-    reactionsToAdd.splice(0, Math.floor(Math.random() * (reactionsToAdd.length - 1)))
-    reactionsToAdd.forEach(function (reaction) {
-      emitter.emit(eventTypes.OUT.webPost, 'reactions.add',
-        {
-          name: reaction,
-          channel: payload.channel,
-          timestamp: payload.ts
-        },
-        (err, resp) => {
-          if (err) {
-            debug(err)
-          }
-        })
-    })
+    if (Math.random() > 0.9) {
+      // cada tanto incluimos al nombre de usuario para que no sea tan pesado
+      words.add('<@' + payload.user + '>')
+    }
+    reactTo(allReactions, Array.from(words), emitter, payload.ts, payload.channel)
+  })
+  emitter.on('reaction:added', (payload) => {
+    reactTo(allReactions, [payload.reaction, ':' + payload.reaction + ':'], emitter, payload.item.ts, payload.item.channel)
   })
 }
