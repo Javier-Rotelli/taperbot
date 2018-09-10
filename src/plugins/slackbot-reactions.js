@@ -4,6 +4,43 @@ import fs from 'fs'
 
 const reactionsFile = 'data/reactions.json'
 
+const userRegex = /<[@!#][^>]*>/gi
+const removeNameRegex = /(\|[^>]*)/gi
+const splitRegex = /[,.\s?¿¡!\\/"'`*+\-;_=()&$|@#[\]]+/gi
+function splitWords (text) {
+  text = text || ''
+  let usernames = (userRegex.exec(text) || []).map(x => x.replace(removeNameRegex, ''))
+  return text.replace(userRegex, ' ').split(splitRegex).concat(usernames)
+}
+function flatMap (array, callback) {
+  return array.reduce((acc, x) => acc.concat(callback(x)), [])
+}
+
+function reactTo (allReactions, words, emitter, ts, channel) {
+  // buscar reactions
+  let reactions = new Set(flatMap(words, item => allReactions[item.toLowerCase()] || []))
+  // mezclar reactions
+  let reactionsToAdd = []
+  reactions.forEach(function (reaction) {
+    let position = Math.floor(Math.random() * (reactionsToAdd.length + 1))
+    reactionsToAdd.splice(position, 0, reaction)
+  })
+  // recortar algunas
+  reactionsToAdd.splice(0, Math.floor(Math.random() * (reactionsToAdd.length - 1)))
+  // enviar
+  reactionsToAdd.forEach(function (reaction, index) {
+    setTimeout(function () {
+      emitter.emit(eventTypes.OUT.webPost, 'reactions.add',
+        {
+          name: reaction,
+          channel: channel,
+          timestamp: ts
+        },
+        (_) => {})
+    }, (Math.random() + index) * 1500)
+  })
+}
+
 export default (config, emitter, debug) => {
   let allReactions = {}
   if (fs.existsSync(reactionsFile)) {
@@ -21,13 +58,13 @@ export default (config, emitter, debug) => {
       })
       emitter.emit('send:message', description, message.channel)
     } else if (command.text) {
-      let components = command.text.split(' ')
+      let components = splitWords(command.text)
       let posibleReaction = components[components.length - 1]
       if (posibleReaction.indexOf(':', 0) === 0 && posibleReaction.indexOf(':', posibleReaction.length - 1) !== -1) {
         let reaction = posibleReaction.substring(1, posibleReaction.length - 1)
         for (let i = 0; i < components.length - 1; i++) {
           // agregamos/quitamos la reaction para cada palabrita
-          let word = components[i]
+          let word = components[i].toLowerCase()
           if (!word) {
             continue
           }
@@ -56,32 +93,18 @@ export default (config, emitter, debug) => {
     }
   })
   emitter.on(eventTypes.IN.receivedOtherMessage, (payload) => {
-    let words = (payload.text || '').split(' ')
-    let reactions = new Set()
-    words.forEach(function (item) {
-      let r = allReactions[item] || []
-      r.forEach(function (reaction) {
-        reactions.add(reaction)
-      })
-    })
-    let reactionsToAdd = []
-    reactions.forEach(function (reaction) {
-      let position = Math.floor(Math.random() * (reactionsToAdd.length + 1))
-      reactionsToAdd.splice(position, 0, reaction)
-    })
-    reactionsToAdd.splice(0, Math.floor(Math.random() * (reactionsToAdd.length - 1)))
-    reactionsToAdd.forEach(function (reaction) {
-      emitter.emit(eventTypes.OUT.webPost, 'reactions.add',
-        {
-          name: reaction,
-          channel: payload.channel,
-          timestamp: payload.ts
-        },
-        (err, resp) => {
-          if (err) {
-            debug(err)
-          }
-        })
-    })
+    let words = new Set(splitWords(payload.text))
+    if (Math.random() > 0.9) {
+      // cada tanto incluimos al nombre de usuario para que no sea tan pesado
+      words.add('<@' + payload.user + '>')
+    }
+    if (Math.random() > 0.97) {
+      // cada tanto tanto incluimos al channel para que no sea tan pesado
+      words.add('<#' + payload.channel + '>')
+    }
+    reactTo(allReactions, Array.from(words), emitter, payload.ts, payload.channel)
+  })
+  emitter.on('reaction:added', (payload) => {
+    reactTo(allReactions, [payload.reaction, ':' + payload.reaction + ':'], emitter, payload.item.ts, payload.item.channel)
   })
 }
