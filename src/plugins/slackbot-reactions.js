@@ -4,11 +4,12 @@ import fs from 'fs'
 
 const reactionsFile = 'data/reactions.json'
 
-const userRegex = /<@[^>]*>/gi
+const userRegex = /<[@!#][^>]*>/gi
+const removeNameRegex = /(\|[^>]*)/gi
 const splitRegex = /[,.\s?¿¡!\\/"'`*+\-;_=()&$|@#[\]]+/gi
 function splitWords (text) {
   text = text || ''
-  let usernames = userRegex.exec(text) || []
+  let usernames = (userRegex.exec(text) || []).map(x => x.replace(removeNameRegex, ''))
   return text.replace(userRegex, ' ').split(splitRegex).concat(usernames)
 }
 function flatMap (array, callback) {
@@ -96,6 +97,10 @@ export default (config, emitter, debug) => {
     if (Math.random() > 0.9) {
       // cada tanto incluimos al nombre de usuario para que no sea tan pesado
       words.add('<@' + payload.user + '>')
+    }
+    if (Math.random() > 0.97) {
+      // cada tanto tanto incluimos al channel para que no sea tan pesado
+      words.add('<#' + payload.channel + '>')
     }
     reactTo(allReactions, Array.from(words), emitter, payload.ts, payload.channel)
   })
