@@ -1,17 +1,10 @@
 import commandParser from '../commandParser'
+import splitWords from '../splitWords'
 import eventTypes from '../eventTypes'
 import fs from 'fs'
 
 const reactionsFile = 'data/reactions.json'
 
-const userRegex = /<[@!#][^>]*>/gi
-const removeNameRegex = /(\|[^>]*)/gi
-const splitRegex = /[,.\s?¿¡!\\/"'`*+\-;_=()&$|@#[\]]+/gi
-function splitWords (text) {
-  text = text || ''
-  let usernames = (userRegex.exec(text) || []).map(x => x.replace(removeNameRegex, ''))
-  return text.replace(userRegex, ' ').split(splitRegex).concat(usernames)
-}
 function flatMap (array, callback) {
   return array.reduce((acc, x) => acc.concat(callback(x)), [])
 }
@@ -51,14 +44,15 @@ export default (config, emitter, debug) => {
     if (command === null || (command.command !== 'reaction')) {
       return
     }
-    if (command.text === 'list') {
+    let components = splitWords(command.text)
+    console.log(components)
+    if (components.length === 1 && components[0] === 'list') {
       let description = 'Reactions configuradas:\n'
       Object.keys(allReactions).forEach(function (word) {
         description += word + ': :' + allReactions[word].join(': :') + ':\n'
       })
       emitter.emit('send:message', description, message.channel)
     } else if (command.text) {
-      let components = splitWords(command.text)
       let posibleReaction = components[components.length - 1]
       if (posibleReaction.indexOf(':', 0) === 0 && posibleReaction.indexOf(':', posibleReaction.length - 1) !== -1) {
         let reaction = posibleReaction.substring(1, posibleReaction.length - 1)
