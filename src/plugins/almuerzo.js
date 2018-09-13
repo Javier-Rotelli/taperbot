@@ -1,10 +1,54 @@
 import eventTypes from '../eventTypes'
+import fs from 'fs'
+
+const almuerzoFile = 'data/almuerzo.json'
 
 export default (config, emitter, debug) => {
   let state = {
     messages: {}
   }
   const triggerReaction = config.reaction
+  const defaultReactions = config.defaultReactions
+  const timeout = config.timeout
+  if (fs.existsSync(almuerzoFile)) {
+    state = JSON.parse(fs.readFileSync(almuerzoFile, 'utf8'))
+    Object.keys(state.messages).forEach(k => {
+      const almuerzo = state.messages[k]
+      const timeoutDate = new Date(almuerzo.ts * 1000 + timeout)
+      if (timeoutDate < new Date()) {
+        // muy viejo, lo borramos
+        state.messages[k] = undefined
+        return
+      }
+      emitter.emit(eventTypes.OUT.webGet, 'conversations.history', {
+        channel: almuerzo.channel,
+        latest: almuerzo.originalMessage,
+        oldest: almuerzo.originalMessage,
+        inclusive: true
+      },
+        (error, response) => {
+          debug(error)
+          let message
+          if (response.ok && (message = response.messages[0])) {
+            const reactedUsers = (message.reactions || [])
+                .reduce((acc, r) => {
+                  const name = r.name.split('::')[0]
+                  debug(r)
+                  if (acc[name]) {
+                    acc[name] = acc[name].concat(r.users)
+                  } else {
+                    acc[name] = r.users.slice()
+                  }
+                  debug(acc)
+                  return acc
+                }, {})
+            Object.values(almuerzo.reactions).forEach(r => {
+              r.current = reactedUsers[r.name] || []
+            })
+          }
+        })
+    })
+  }
 
   function updateMessage (key) {
     const message = state.messages[key]
@@ -32,7 +76,7 @@ export default (config, emitter, debug) => {
     return 'Hoy comen\n' + Object.values(reactions)
       .map(x => `:${x.name}: -> ` + x.original.length + x.final.map(u => ` <@${u}>`))
       .join('\n') +
-      ((block && Object.values(reactions).map(r => block(r)).join('\n')) || '')
+      ((block && '\n' + Object.values(reactions).map(r => block(r)).join('\n')) || '')
   }
   emitter.on(eventTypes.IN.reactionAdded, (payload) => {
     const ts = payload.item.ts
@@ -66,9 +110,11 @@ export default (config, emitter, debug) => {
               return acc
             }, {})
           debug(reactedUsers)
-          const countableReactions = [...((message.text || '').match(/(:[^\s:]+:)/igm) || [])]
+          const reactedDefaults = Object.keys(reactedUsers).filter(x => defaultReactions.indexOf(x) >= 0)
+          let reactionsInfo = [...((message.text || '').match(/(:[^\s:]+:)/igm) || [])]
             .map(x => x.substring(1, x.length - 1))
             .filter(x => !x.startsWith('skin-tone-'))
+            .concat(reactedDefaults)
             .reduce((acc, name) => {
               acc[name] = {
                 name: name,
@@ -80,23 +126,23 @@ export default (config, emitter, debug) => {
               }
               return acc
             }, {})
-          debug(countableReactions)
-          if (Object.keys(countableReactions).length > 0) {
-            const text = todayEat(countableReactions)
+          if (Object.keys(reactionsInfo).length > 0) {
+            const text = todayEat(reactionsInfo)
             state.messages[key] = {
               channel: channel,
               originalMessage: ts,
-              reactions: countableReactions,
+              reactions: reactionsInfo,
               text: text
             }
             emitter.emit(eventTypes.OUT.webPost, 'chat.postMessage', {
               channel: channel,
               text: text,
               link_names: false,
-              username: 'acá se come bien'
+              as_user: true
             }, (err, response) => {
               debug(err)
               state.messages[key].ts = response.ts
+              fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
             })
           }
         }
