@@ -3,6 +3,7 @@ export default {
     receivedMessage: 'received:message',
     receivedOtherMessage: 'received:other_message',
     reactionAdded: 'reaction:added',
+    reactionRemoved: 'reaction:removed',
     memberLeftChannel: 'member:left_channel'
   },
   OUT: {

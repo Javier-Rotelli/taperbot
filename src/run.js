@@ -45,6 +45,9 @@ const startServer = (url) => {
       case 'reaction_added':
         emitter.emit(eventTypes.IN.reactionAdded, payload)
         break
+      case 'reaction_removed':
+        emitter.emit(eventTypes.IN.reactionRemoved, payload)
+        break
       case 'member_left_channel':
         emitter.emit(eventTypes.IN.memberLeftChannel, payload)
         break
