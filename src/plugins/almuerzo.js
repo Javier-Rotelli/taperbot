@@ -45,6 +45,7 @@ export default (config, emitter, debug) => {
             Object.values(almuerzo.reactions).forEach(r => {
               r.current = reactedUsers[r.name] || []
             })
+            updateMessage(k)
           }
         })
     })
@@ -96,7 +97,7 @@ export default (config, emitter, debug) => {
       (error, response) => {
         debug(error)
         let message
-        if (response.ok && (message = response.messages[0])) {
+        if (response.ok && (message = response.messages[0]) && !state.messages[key]) {
           const reactedUsers = (message.reactions || [])
             .reduce((acc, r) => {
               const name = r.name.split('::')[0]
