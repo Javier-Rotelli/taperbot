@@ -17,6 +17,12 @@
     "url": "git://github.com/Javier-Rotelli/taperbot.git"
   },
   "license": "ISC",
+  "nodemonConfig": {
+    "ignore": [
+      "test/*",
+      "data/*"
+    ]
+  },
   "dependencies": {
     "apisauce": "^0.14.0",
     "babel-cli": "^6.22.2",

@@ -19,6 +19,9 @@ module.exports = function (shipit) {
       shallowClone: true,
       shared: {
         overwrite: true,
+        dirs: [
+          'data'
+        ],
         files: [
           'config.yml'
         ]
