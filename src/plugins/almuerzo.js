@@ -130,6 +130,7 @@ export default (config, emitter, debug) => {
   emitter.on(eventTypes.IN.reactionAdded, (payload) => {
     const ts = payload.item.ts
     const channel = payload.item.channel
+    const user = payload.user
     const key = channel + '-' + ts
     const reaction = payload.reaction.split('..')[0]
     if (reaction === triggerReaction && !state.messages[key]) {
@@ -161,6 +162,7 @@ export default (config, emitter, debug) => {
             const text = todayEat(reactionsInfo)
             state.messages[key] = {
               channel: channel,
+              user: user,
               originalMessage: ts,
               reactions: reactionsInfo
             }
@@ -199,6 +201,18 @@ export default (config, emitter, debug) => {
         r.current.splice(index, 1)
         updateMessage(key)
       }
+    } else if (reaction === triggerReaction && state.messages[key] && state.messages[key].user === payload.user) {
+      emitter.emit(eventTypes.OUT.webPost, 'chat.delete', {
+        channel: state.messages[key].channel,
+        ts: state.messages[key].ts
+      }, (error) => {
+        if (!error) {
+          state.messages[key] = undefined
+          fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+        } else {
+          debug(error)
+        }
+      })
     }
   })
   emitter.on(eventTypes.IN.receivedOtherMessage, (payload) => {
