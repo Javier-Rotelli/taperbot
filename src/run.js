@@ -3,7 +3,7 @@ import request from 'request'
 import {EventEmitter} from 'events'
 import createDebug from 'debug'
 import {getConfig} from './config'
-import {getNextId, isFromChannels, shouldProcess} from './messageUtil'
+import {getNextId, isFromChannels, shouldProcess, isFromUser} from './messageUtil'
 import adminPlugin from './plugins/admin'
 import eventTypes from './eventTypes'
 import { getFromAPI, postToAPI } from './slackWeb'
@@ -38,7 +38,7 @@ const startServer = (url) => {
       case 'message':
         if (shouldProcess(payload, conf.userId)) {
           emitter.emit(eventTypes.IN.receivedMessage, payload)
-        } else {
+        } else if (!isFromUser(payload, conf.userId)) {
           emitter.emit(eventTypes.IN.receivedOtherMessage, payload)
         }
         break
