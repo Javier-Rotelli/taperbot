@@ -9,6 +9,8 @@ export default (config, emitter, debug) => {
     messages: {}
   }
   const triggerReaction = config.reaction
+  const countReaction = config.countReaction
+  const allTriggers = [triggerReaction, ...countReaction && [countReaction]]
   const defaultReactions = config.defaultReactions
   const timeout = config.timeout
   if (fs.existsSync(almuerzoFile)) {
@@ -20,6 +22,11 @@ export default (config, emitter, debug) => {
         // muy viejo, lo borramos
         state.messages[k] = undefined
         return
+      }
+      if (!almuerzo.triggers) {
+        // migrar almuerzos existentes
+        almuerzo.triggers = [triggerReaction]
+        almuerzo.isCounting = false
       }
       fetchReactedUsers(almuerzo.channel, almuerzo.originalMessage, (error, reactedUsers) => {
         if (reactedUsers) {
@@ -46,12 +53,21 @@ export default (config, emitter, debug) => {
   function updateMessage (key) {
     const message = state.messages[key]
     Object.values(message.reactions).forEach(r => {
-      const original = nonRepeated(r.original)
-      r.count = original.length
-      const current = nonRepeated(r.current)
-      r.final = current.filter((_, i) => i < r.count)
-      r.up = current.filter((_, i) => i >= r.count)
-      r.down = original.filter(x => r.final.indexOf(x) < 0)
+      if (message.isCounting) {
+        const current = nonRepeated(r.current)
+        r.original = current
+        r.count = current.length
+        r.final = current
+        r.up = []
+        r.down = []
+      } else {
+        const original = nonRepeated(r.original)
+        r.count = original.length
+        const current = nonRepeated(r.current)
+        r.final = current.filter((_, i) => i < r.count)
+        r.up = current.filter((_, i) => i >= r.count)
+        r.down = original.filter(x => r.final.indexOf(x) < 0)
+      }
     })
     const text = todayEat(message.reactions, r => {
       if (r.up.length > 0 || r.down.length > 0) {
@@ -67,6 +83,13 @@ export default (config, emitter, debug) => {
       ts: message.ts
     }, (error) => { debug(error) })
     fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+  }
+  function typeFromTriggers (triggers) {
+    const main = triggers.indexOf(triggerReaction) >= 0
+    const count = triggers.indexOf(countReaction) >= 0
+    return {
+      isCounting: !main && count
+    }
   }
   function todayEat (reactions, block) {
     return 'Hoy comen\n' + Object.values(reactions)
@@ -133,7 +156,8 @@ export default (config, emitter, debug) => {
     const user = payload.user
     const key = channel + '-' + ts
     const reaction = payload.reaction.split('..')[0]
-    if (reaction === triggerReaction && !state.messages[key]) {
+    if (allTriggers.indexOf(reaction) >= 0 && !state.messages[key]) {
+      const triggers = [reaction]
       emitter.emit(eventTypes.OUT.startTyping, {
         channel: channel
       }, (_) => {})
@@ -164,7 +188,9 @@ export default (config, emitter, debug) => {
               channel: channel,
               user: user,
               originalMessage: ts,
-              reactions: reactionsInfo
+              triggers: triggers,
+              reactions: reactionsInfo,
+              ...typeFromTriggers(triggers)
             }
             emitter.emit(eventTypes.OUT.webPost, 'chat.postMessage', {
               channel: channel,
@@ -181,11 +207,19 @@ export default (config, emitter, debug) => {
           debug(error)
         }
       })
-    } else if (reaction !== triggerReaction && state.messages[key]) {
-      const r = state.messages[key].reactions[reaction]
-      if (r) {
-        r.current.push(payload.user)
+    } else if (state.messages[key]) {
+      const m = state.messages[key]
+      if (allTriggers.indexOf(reaction) >= 0 && m.user === payload.user) {
+        const m = state.messages[key]
+        m.triggers.push(reaction)
+        state.messages[key] = {...m, ...typeFromTriggers(m.triggers)}
         updateMessage(key)
+      } else {
+        const r = m.reactions[reaction]
+        if (r) {
+          r.current.push(payload.user)
+          updateMessage(key)
+        }
       }
     }
   })
@@ -194,17 +228,28 @@ export default (config, emitter, debug) => {
     const channel = payload.item.channel
     const key = channel + '-' + ts
     const reaction = payload.reaction.split('..')[0]
-    if (reaction !== triggerReaction && state.messages[key]) {
+    if (allTriggers.indexOf(reaction) < 0 && state.messages[key]) {
       const r = state.messages[key].reactions[reaction]
       const index = r ? r.current.lastIndexOf(payload.user) : -1
       if (index >= 0) {
         r.current.splice(index, 1)
         updateMessage(key)
       }
-    } else if (reaction === triggerReaction && state.messages[key] && state.messages[key].user === payload.user) {
+    } else if (allTriggers.indexOf(reaction) >= 0 && state.messages[key] && state.messages[key].user === payload.user) {
+      const m = state.messages[key]
+      debug(m)
+      if (m.triggers.length > 1) {
+        const index = m.triggers.lastIndexOf(reaction)
+        if (index >= 0) {
+          m.triggers.splice(index, 1)
+          state.messages[key] = {...m, ...typeFromTriggers(m.triggers)}
+          updateMessage(key)
+        }
+        return
+      }
       emitter.emit(eventTypes.OUT.webPost, 'chat.delete', {
-        channel: state.messages[key].channel,
-        ts: state.messages[key].ts
+        channel: m.channel,
+        ts: m.ts
       }, (error) => {
         if (!error) {
           state.messages[key] = undefined
