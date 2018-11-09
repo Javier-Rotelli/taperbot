@@ -101,7 +101,6 @@ export default (config, emitter, debug) => {
   })
   emitter.on('reaction:added', (payload) => {
     if (payload.reaction === deleteReaction) {
-      debug(payload)
       if (payload.item_user === config.userId) {
         emitter.emit(eventTypes.OUT.webPost, 'chat.delete', {
           channel: payload.item.channel,
@@ -119,7 +118,7 @@ export default (config, emitter, debug) => {
         (error, response) => {
           if (error) {
             debug(error)
-          } else {
+          } else if (response.messages.length > 0) {
             response.messages[0].reactions.forEach(r => {
               if (r.users.indexOf(config.userId) >= 0) {
                 emitter.emit(eventTypes.OUT.webPost, 'reactions.remove',
