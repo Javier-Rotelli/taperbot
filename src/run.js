@@ -30,13 +30,11 @@ const startServer = (url) => {
 
   ws.on('message', (rawMessage) => {
     const payload = JSON.parse(rawMessage)
-    if (isFromChannels(payload, conf.ignoredChannels)) {
-      return
-    }
+    const ignore = isFromChannels(payload, conf.ignoredChannels)
     log(payload)
     switch (payload.type) {
       case 'message':
-        if (shouldProcess(payload, conf.userId)) {
+        if (!ignore && shouldProcess(payload, conf.userId)) {
           emitter.emit(eventTypes.IN.receivedMessage, payload)
         } else if (!isFromUser(payload, conf.userId)) {
           emitter.emit(eventTypes.IN.receivedOtherMessage, payload)
