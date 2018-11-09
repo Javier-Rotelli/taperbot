@@ -35,6 +35,7 @@ function reactTo (allReactions, words, emitter, ts, channel) {
 }
 
 export default (config, emitter, debug) => {
+  const deleteReaction = config.deleteReaction
   let allReactions = {}
   if (fs.existsSync(reactionsFile)) {
     allReactions = JSON.parse(fs.readFileSync(reactionsFile, 'utf8'))
@@ -99,6 +100,42 @@ export default (config, emitter, debug) => {
     reactTo(allReactions, Array.from(words), emitter, payload.ts, payload.channel)
   })
   emitter.on('reaction:added', (payload) => {
-    reactTo(allReactions, [payload.reaction, ':' + payload.reaction + ':'], emitter, payload.item.ts, payload.item.channel)
+    if (payload.reaction === deleteReaction) {
+      debug(payload)
+      if (payload.item_user === config.userId) {
+        emitter.emit(eventTypes.OUT.webPost, 'chat.delete', {
+          channel: payload.item.channel,
+          ts: payload.item.ts
+        }, (error) => {
+          debug(error)
+        })
+      } else {
+        emitter.emit(eventTypes.OUT.webGet, 'conversations.history', {
+          channel: payload.item.channel,
+          latest: payload.item.ts,
+          oldest: payload.item.ts,
+          inclusive: true
+        },
+        (error, response) => {
+          if (error) {
+            debug(error)
+          } else {
+            response.messages[0].reactions.forEach(r => {
+              if (r.users.indexOf(config.userId) >= 0) {
+                emitter.emit(eventTypes.OUT.webPost, 'reactions.remove',
+                  {
+                    name: r.name,
+                    channel: payload.item.channel,
+                    timestamp: payload.item.ts
+                  },
+                  (_) => {})
+              }
+            })
+          }
+        })
+      }
+    } else {
+      reactTo(allReactions, [payload.reaction, ':' + payload.reaction + ':'], emitter, payload.item.ts, payload.item.channel)
+    }
   })
 }
