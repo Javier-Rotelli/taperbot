@@ -10,8 +10,12 @@ export default (config, emitter, debug) => {
   }
   const triggerReaction = config.reaction
   const countReaction = config.countReaction
-  const allTriggers = [triggerReaction, ...countReaction && [countReaction]]
+  const reverseCountReaction = config.reverseCountReaction
+  const allTriggers = [triggerReaction, ...countReaction && [countReaction], ...reverseCountReaction && [reverseCountReaction]]
   const defaultReactions = config.defaultReactions
+  const defaultReverseCountReactions = config.defaultReverseCountReactions
+  const countMessage = config.countMessage
+  const reverseCountMessage = config.reverseCountMessage
   const timeout = config.timeout
   if (fs.existsSync(almuerzoFile)) {
     state = JSON.parse(fs.readFileSync(almuerzoFile, 'utf8'))
@@ -50,10 +54,17 @@ export default (config, emitter, debug) => {
   function userToString (u) {
     return u.startsWith('_') ? ` ${u}` : ` <@${u}>`
   }
-  function updateMessage (key) {
+  function updateMessage (key, isNew) {
     const message = state.messages[key]
     Object.values(message.reactions).forEach(r => {
-      if (message.isCounting) {
+      if (message.isReverseCount) {
+        const current = nonRepeated(r.current)
+        r.original = current
+        r.count = message.allUsers.length - current.length
+        r.final = message.allUsers.filter(x => r.original.indexOf(x) < 0)
+        r.up = []
+        r.down = []
+      } else if (message.isCounting) {
         const current = nonRepeated(r.current)
         r.original = current
         r.count = current.length
@@ -69,7 +80,7 @@ export default (config, emitter, debug) => {
         r.down = original.filter(x => r.final.indexOf(x) < 0)
       }
     })
-    const text = todayEat(message.reactions, r => {
+    const text = todayEat(message, r => {
       if (r.up.length > 0 || r.down.length > 0) {
         return ':' + r.name + ':' +
           ' - se ' + (r.down.length > 1 ? 'bajaron' : 'bajo') + ': ' + r.down.map(userToString).join(',') +
@@ -77,22 +88,42 @@ export default (config, emitter, debug) => {
       }
       return ''
     })
-    emitter.emit(eventTypes.OUT.webPost, 'chat.update', {
-      channel: message.channel,
-      text: text,
-      ts: message.ts
-    }, (error) => { debug(error) })
-    fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+    if (isNew) {
+      emitter.emit(eventTypes.OUT.webPost, 'chat.postMessage', {
+        channel: message.channel,
+        text: text,
+        link_names: false,
+        as_user: true
+      }, (err, response) => {
+        debug(err)
+        state.messages[key].ts = response.ts
+        fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+      })
+    } else {
+      emitter.emit(eventTypes.OUT.webPost, 'chat.update', {
+        channel: message.channel,
+        text: text,
+        ts: message.ts
+      }, (error) => { debug(error) })
+      fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+    }
   }
   function typeFromTriggers (triggers) {
     const main = triggers.indexOf(triggerReaction) >= 0
     const count = triggers.indexOf(countReaction) >= 0
+    const reverse = triggers.indexOf(reverseCountReaction) >= 0
     return {
-      isCounting: !main && count
+      isReverseCount: reverse,
+      isCounting: (!main && count) || reverse
     }
   }
-  function todayEat (reactions, block) {
-    return 'Hoy comen\n' + Object.values(reactions)
+  function titleFor (message) {
+    return message.isReverseCount ? reverseCountMessage : countMessage
+  }
+  function todayEat (message, block) {
+    const reactions = message.reactions
+    return titleFor(message) + '\n' + Object.values(reactions)
+      .filter(x => x.count > 0 || !x.hideIfEmpty)
       .map(x => `:${x.name}: -> ` + x.count + x.final.map(userToString) + (x.count > x.final.length ? ` + ${x.count - x.final.length} libre(s)` : ''))
       .join('\n') +
       ((block && '\n' + Object.values(reactions).map(r => block(r)).join('\n')) || '')
@@ -161,19 +192,22 @@ export default (config, emitter, debug) => {
       emitter.emit(eventTypes.OUT.startTyping, {
         channel: channel
       }, (_) => {})
+      const type = typeFromTriggers(triggers)
       !state.messages[key] && fetchReactedUsers(channel, ts, (error, reactedUsers, message) => {
         if (reactedUsers) {
-          const reactedDefaults = Object.keys(reactedUsers).filter(x => defaultReactions.indexOf(x) >= 0)
-          let reactionsInfo = [...((message.text || '').match(/(:[^\s:]+:)/igm) || [])]
+          const theDefaultReactions = type.isReverseCount ? defaultReverseCountReactions : defaultReactions
+          const reactedInMessage = [...((message.text || '').match(/(:[^\s:]+:)/igm) || [])]
             .map(x => x.substring(1, x.length - 1))
             .filter(x => !x.startsWith('skin-tone-'))
-            .concat(reactedDefaults)
+          const reactionsInfo = reactedInMessage
+            .concat(theDefaultReactions)
             .reduce((acc, name) => {
               const users = reactedUsers[name] || []
               return { ...acc,
                 [name]: {
                   name: name,
                   count: nonRepeated(users).length,
+                  hideIfEmpty: reactedInMessage.indexOf(name) < 0,
                   original: users,
                   current: users.slice(),
                   final: users.slice(),
@@ -183,24 +217,19 @@ export default (config, emitter, debug) => {
               }
             }, {})
           if (Object.keys(reactionsInfo).length > 0) {
-            const text = todayEat(reactionsInfo)
-            state.messages[key] = {
-              channel: channel,
-              user: user,
-              originalMessage: ts,
-              triggers: triggers,
-              reactions: reactionsInfo,
-              ...typeFromTriggers(triggers)
-            }
-            emitter.emit(eventTypes.OUT.webPost, 'chat.postMessage', {
-              channel: channel,
-              text: text,
-              link_names: false,
-              as_user: true
-            }, (err, response) => {
-              debug(err)
-              state.messages[key].ts = response.ts
-              fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+            emitter.emit(eventTypes.OUT.webGet, 'conversations.members', {
+              channel: channel
+            }, (error, response) => {
+              state.messages[key] = {
+                channel: channel,
+                user: user,
+                originalMessage: ts,
+                triggers: triggers,
+                allUsers: !error ? response.members : [],
+                reactions: reactionsInfo,
+                ...type
+              }
+              updateMessage(key, true)
             })
           }
         } else {
