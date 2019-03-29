@@ -16,6 +16,7 @@ export default (config, emitter, debug) => {
   const defaultReverseCountReactions = config.defaultReverseCountReactions
   const countMessage = config.countMessage
   const reverseCountMessage = config.reverseCountMessage
+  const ignoreUsers = config.ignoreUsers
   const timeout = config.timeout
   if (fs.existsSync(almuerzoFile)) {
     state = JSON.parse(fs.readFileSync(almuerzoFile, 'utf8'))
@@ -57,15 +58,14 @@ export default (config, emitter, debug) => {
   function updateMessage (key, isNew) {
     const message = state.messages[key]
     Object.values(message.reactions).forEach(r => {
-      if (message.isReverseCount) {
-        const current = nonRepeated(r.current)
+      const current = nonRepeated(r.current)
+      if (message.isReverseCount && (current.length > 0 || !r.hideIfEmpty)) {
         r.original = current
-        r.count = message.allUsers.length - current.length
         r.final = message.allUsers.filter(x => r.original.indexOf(x) < 0)
+        r.count = r.final.length
         r.up = []
         r.down = []
       } else if (message.isCounting) {
-        const current = nonRepeated(r.current)
         r.original = current
         r.count = current.length
         r.final = current
@@ -74,7 +74,6 @@ export default (config, emitter, debug) => {
       } else {
         const original = nonRepeated(r.original)
         r.count = original.length
-        const current = nonRepeated(r.current)
         r.final = current.filter((_, i) => i < r.count)
         r.up = current.filter((_, i) => i >= r.count)
         r.down = original.filter(x => r.final.indexOf(x) < 0)
@@ -207,7 +206,7 @@ export default (config, emitter, debug) => {
                 [name]: {
                   name: name,
                   count: nonRepeated(users).length,
-                  hideIfEmpty: reactedInMessage.indexOf(name) < 0,
+                  hideIfEmpty: reactedInMessage.indexOf(name) < 0 || reactedInMessage.length === 0,
                   original: users,
                   current: users.slice(),
                   final: users.slice(),
@@ -225,7 +224,7 @@ export default (config, emitter, debug) => {
                 user: user,
                 originalMessage: ts,
                 triggers: triggers,
-                allUsers: !error ? response.members : [],
+                allUsers: !error ? response.members.filter(x => ignoreUsers.indexOf(x) < 0) : [],
                 reactions: reactionsInfo,
                 ...type
               }
