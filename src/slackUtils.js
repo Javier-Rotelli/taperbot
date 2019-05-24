@@ -41,3 +41,7 @@ export const getGroups = async (emitter) => {
       })
   })
 }
+
+export const userToString = (u) => {
+  return u.startsWith('_') ? ` ${u}` : ` <@${u}>`
+}

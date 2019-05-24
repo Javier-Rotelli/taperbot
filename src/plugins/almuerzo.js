@@ -2,6 +2,8 @@ import eventTypes from '../eventTypes'
 import splitWords from '../splitWords'
 import fs from 'fs'
 
+import { userToString } from '../slackUtils'
+
 const almuerzoFile = 'data/almuerzo.json'
 
 export default (config, emitter, debug) => {
@@ -40,6 +42,7 @@ export default (config, emitter, debug) => {
       })
     })
   }
+
   function applyAll (previous, updated) {
     let retval = previous.concat(updated)
     previous.forEach(x => {
@@ -47,9 +50,7 @@ export default (config, emitter, debug) => {
     })
     return retval
   }
-  function userToString (u) {
-    return u.startsWith('_') ? ` ${u}` : ` <@${u}>`
-  }
+
   function updateMessage (key) {
     const message = state.messages[key]
     Object.values(message.reactions).forEach(r => {
@@ -84,6 +85,7 @@ export default (config, emitter, debug) => {
     }, (error) => { debug(error) })
     fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
   }
+
   function typeFromTriggers (triggers) {
     const main = triggers.indexOf(triggerReaction) >= 0
     const count = triggers.indexOf(countReaction) >= 0
@@ -91,19 +93,23 @@ export default (config, emitter, debug) => {
       isCounting: !main && count
     }
   }
+
   function todayEat (reactions, block) {
     return 'Hoy comen\n' + Object.values(reactions)
-      .map(x => `:${x.name}: -> ` + x.count + x.final.map(userToString) + (x.count > x.final.length ? ` + ${x.count - x.final.length} libre(s)` : ''))
-      .join('\n') +
+        .map(x => `:${x.name}: -> ` + x.count + x.final.map(userToString) + (x.count > x.final.length ? ` + ${x.count - x.final.length} libre(s)` : ''))
+        .join('\n') +
       ((block && '\n' + Object.values(reactions).map(r => block(r)).join('\n')) || '')
   }
+
   function nonRepeated (array) {
     return array.filter((x, i, a) => a.indexOf(x) === i)
   }
+
   function matchingGroup (text, regex) {
     const result = regex.exec(text)
     return result && result.length > 1 && result[1]
   }
+
   function countFromText (text) {
     const words = splitWords(text)
     const reaction = words.length > 1 && matchingGroup(words[0], /:([^\s:]+):/i)
@@ -112,44 +118,46 @@ export default (config, emitter, debug) => {
       users: words.slice(1).map(x => matchingGroup(x, /<@(.*)>/i) || `_${x}_`)
     })
   }
+
   function fetchReactedUsers (channel, ts, then) {
     emitter.emit(eventTypes.OUT.webGet, 'conversations.history', {
-      channel: channel,
-      latest: ts,
-      oldest: ts,
-      inclusive: true
-    },
-    (error, response) => {
-      debug(error)
-      let originalMessage
-      if (response.ok && (originalMessage = response.messages[0])) {
-        emitter.emit(eventTypes.OUT.webGet, 'conversations.replies', {
-          channel: channel,
-          ts: ts,
-          limit: 100
-        },
-        (error, response) => {
-          let submessages
-          if (response.ok && (submessages = response.messages)) {
-            const reactedInMessages = submessages
-              .map(m => countFromText(m.text))
-              .filter(x => x)
-            const reactedUsers = (originalMessage.reactions || [])
-              .concat(reactedInMessages)
-              .reduce((acc, r) => {
-                const name = r.name.split('::')[0]
-                return { ...acc, [name]: (acc[name] || []).concat(r.users) }
-              }, {})
-            then(null, reactedUsers, originalMessage)
-          } else {
-            then(error)
-          }
-        })
-      } else {
-        then(error)
-      }
-    })
+        channel: channel,
+        latest: ts,
+        oldest: ts,
+        inclusive: true
+      },
+      (error, response) => {
+        debug(error)
+        let originalMessage
+        if (response.ok && (originalMessage = response.messages[0])) {
+          emitter.emit(eventTypes.OUT.webGet, 'conversations.replies', {
+              channel: channel,
+              ts: ts,
+              limit: 100
+            },
+            (error, response) => {
+              let submessages
+              if (response.ok && (submessages = response.messages)) {
+                const reactedInMessages = submessages
+                  .map(m => countFromText(m.text))
+                  .filter(x => x)
+                const reactedUsers = (originalMessage.reactions || [])
+                  .concat(reactedInMessages)
+                  .reduce((acc, r) => {
+                    const name = r.name.split('::')[0]
+                    return {...acc, [name]: (acc[name] || []).concat(r.users)}
+                  }, {})
+                then(null, reactedUsers, originalMessage)
+              } else {
+                then(error)
+              }
+            })
+        } else {
+          then(error)
+        }
+      })
   }
+
   emitter.on(eventTypes.IN.reactionAdded, (payload) => {
     const ts = payload.item.ts
     const channel = payload.item.channel
@@ -170,7 +178,8 @@ export default (config, emitter, debug) => {
             .concat(reactedDefaults)
             .reduce((acc, name) => {
               const users = reactedUsers[name] || []
-              return { ...acc,
+              return {
+                ...acc,
                 [name]: {
                   name: name,
                   count: nonRepeated(users).length,
