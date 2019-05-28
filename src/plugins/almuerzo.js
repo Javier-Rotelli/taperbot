@@ -12,17 +12,26 @@ export default (config, emitter, debug) => {
   }
   const triggerReaction = config.reaction
   const countReaction = config.countReaction
-  const allTriggers = [triggerReaction, ...countReaction && [countReaction]]
+  const reverseCountReaction = config.reverseCountReaction
+  const allTriggers = [triggerReaction, ...countReaction && [countReaction], ...reverseCountReaction && [reverseCountReaction]]
   const defaultReactions = config.defaultReactions
+  const defaultReverseCountReactions = config.defaultReverseCountReactions
+  const countMessage = config.countMessage
+  const reverseCountMessage = config.reverseCountMessage
+  const ignoreUsers = config.ignoreUsers
   const timeout = config.timeout
   if (fs.existsSync(almuerzoFile)) {
     state = JSON.parse(fs.readFileSync(almuerzoFile, 'utf8'))
     Object.keys(state.messages).forEach(k => {
       const almuerzo = state.messages[k]
-      const timeoutDate = new Date(almuerzo.ts * 1000 + timeout)
+      const ts = almuerzo.ts || almuerzo.split('-')[1]
+      const timeoutDate = new Date(ts * 1000 + timeout)
       if (timeoutDate < new Date()) {
         // muy viejo, lo borramos
         state.messages[k] = undefined
+        return
+      }
+      if (typeof almuerzo === 'string') {
         return
       }
       if (!almuerzo.triggers) {
@@ -30,12 +39,35 @@ export default (config, emitter, debug) => {
         almuerzo.triggers = [triggerReaction]
         almuerzo.isCounting = false
       }
+      Object.keys(almuerzo.reactions).forEach(kk => {
+        if (!almuerzo.reactions[kk].hideUsers) {
+          almuerzo.reactions[kk].hideUsers = []
+        }
+      })
       fetchReactedUsers(almuerzo.channel, almuerzo.originalMessage, (error, reactedUsers) => {
         if (reactedUsers) {
           Object.values(almuerzo.reactions).forEach(r => {
             r.current = applyAll(r.current, reactedUsers[r.name] || [])
           })
-          updateMessage(k)
+          emitter.emit(eventTypes.OUT.webGet, 'conversations.history', {
+            channel: almuerzo.channel,
+            latest: almuerzo.ts,
+            oldest: almuerzo.ts,
+            inclusive: true
+          },
+          (error, response) => {
+            let countMessage
+            if (response.ok && (countMessage = response.messages[0]) && countMessage.reactions) {
+              countMessage.reactions.forEach(r => {
+                if (almuerzo.reactions[r.name]) {
+                  almuerzo.reactions[r.name].hideUsers = r.users
+                }
+              })
+              updateMessage(k)
+            } else {
+              debug(error)
+            }
+          })
         } else {
           debug(error)
         }
@@ -50,27 +82,37 @@ export default (config, emitter, debug) => {
     })
     return retval
   }
-
-  function updateMessage (key) {
-    const message = state.messages[key]
+  function updateMessage (key, isNew) {
+    let message = state.messages[key]
+    if (typeof message === 'string') {
+      message = state.messages[message]
+    }
     Object.values(message.reactions).forEach(r => {
-      if (message.isCounting) {
-        const current = nonRepeated(r.current)
+      const current = nonRepeated(r.current)
+      if (message.isReverseCount && (current.length > 0 || !r.hideIfEmpty)) {
+        r.original = current
+        r.final = message.allUsers.filter(x => (r.original.indexOf(x) < 0 && r.hideUsers.indexOf(x) < 0))
+        r.count = r.final.length
+        r.finalCount = r.count
+        r.up = []
+        r.down = []
+      } else if (message.isCounting) {
         r.original = current
         r.count = current.length
-        r.final = current
+        r.finalCount = r.count
+        r.final = current.filter(x => r.hideUsers.indexOf(x) < 0)
         r.up = []
         r.down = []
       } else {
         const original = nonRepeated(r.original)
         r.count = original.length
-        const current = nonRepeated(r.current)
-        r.final = current.filter((_, i) => i < r.count)
-        r.up = current.filter((_, i) => i >= r.count)
-        r.down = original.filter(x => r.final.indexOf(x) < 0)
+        r.finalCount = Math.min(r.count, current.length)
+        r.final = current.filter((x, i) => (i < r.count && r.hideUsers.indexOf(x) < 0))
+        r.up = current.filter((x, i) => (i >= r.count && r.hideUsers.indexOf(x) < 0))
+        r.down = original.filter(x => (r.final.indexOf(x) < 0 && r.hideUsers.indexOf(x) < 0))
       }
     })
-    const text = todayEat(message.reactions, r => {
+    const text = todayEat(message, r => {
       if (r.up.length > 0 || r.down.length > 0) {
         return ':' + r.name + ':' +
           ' - se ' + (r.down.length > 1 ? 'bajaron' : 'bajo') + ': ' + r.down.map(userToString).join(',') +
@@ -78,25 +120,47 @@ export default (config, emitter, debug) => {
       }
       return ''
     })
-    emitter.emit(eventTypes.OUT.webPost, 'chat.update', {
-      channel: message.channel,
-      text: text,
-      ts: message.ts
-    }, (error) => { debug(error) })
-    fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+    if (isNew) {
+      emitter.emit(eventTypes.OUT.webPost, 'chat.postMessage', {
+        channel: message.channel,
+        text: text,
+        link_names: false,
+        as_user: true
+      }, (err, response) => {
+        debug(err)
+        state.messages[key].ts = response.ts
+        state.messages[message.channel + '-' + response.ts] = key
+        fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+      })
+    } else {
+      emitter.emit(eventTypes.OUT.webPost, 'chat.update', {
+        channel: message.channel,
+        text: text,
+        ts: message.ts
+      }, (error) => { debug(error) })
+      fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+    }
   }
 
   function typeFromTriggers (triggers) {
     const main = triggers.indexOf(triggerReaction) >= 0
     const count = triggers.indexOf(countReaction) >= 0
+    const reverse = triggers.indexOf(reverseCountReaction) >= 0
     return {
-      isCounting: !main && count
+      isReverseCount: reverse,
+      isCounting: (!main && count) || reverse
     }
   }
 
-  function todayEat (reactions, block) {
-    return 'Hoy comen\n' + Object.values(reactions)
-        .map(x => `:${x.name}: -> ` + x.count + x.final.map(userToString) + (x.count > x.final.length ? ` + ${x.count - x.final.length} libre(s)` : ''))
+  function titleFor (message) {
+    return message.isReverseCount ? reverseCountMessage : countMessage
+  }
+
+  function todayEat (message, block) {
+    const reactions = message.reactions
+    return titleFor(message) + '\n' + Object.values(reactions)
+        .filter(x => x.count > 0 || !x.hideIfEmpty)
+        .map(x => `:${x.name}: -> ` + x.count + x.final.map(userToString) + (x.count > x.final.length ? ` + ${x.count - x.finalCount} libre(s)` : ''))
         .join('\n') +
       ((block && '\n' + Object.values(reactions).map(r => block(r)).join('\n')) || '')
   }
@@ -121,20 +185,20 @@ export default (config, emitter, debug) => {
 
   function fetchReactedUsers (channel, ts, then) {
     emitter.emit(eventTypes.OUT.webGet, 'conversations.history', {
-        channel: channel,
-        latest: ts,
-        oldest: ts,
-        inclusive: true
-      },
+      channel: channel,
+      latest: ts,
+      oldest: ts,
+      inclusive: true
+    },
       (error, response) => {
         debug(error)
         let originalMessage
         if (response.ok && (originalMessage = response.messages[0])) {
           emitter.emit(eventTypes.OUT.webGet, 'conversations.replies', {
-              channel: channel,
-              ts: ts,
-              limit: 100
-            },
+            channel: channel,
+            ts: ts,
+            limit: 100
+          },
             (error, response) => {
               let submessages
               if (response.ok && (submessages = response.messages)) {
@@ -169,13 +233,15 @@ export default (config, emitter, debug) => {
       emitter.emit(eventTypes.OUT.startTyping, {
         channel: channel
       }, (_) => {})
+      const type = typeFromTriggers(triggers)
       !state.messages[key] && fetchReactedUsers(channel, ts, (error, reactedUsers, message) => {
         if (reactedUsers) {
-          const reactedDefaults = Object.keys(reactedUsers).filter(x => defaultReactions.indexOf(x) >= 0)
-          let reactionsInfo = [...((message.text || '').match(/(:[^\s:]+:)/igm) || [])]
+          const theDefaultReactions = type.isReverseCount ? defaultReverseCountReactions : defaultReactions
+          const reactedInMessage = [...((message.text || '').match(/(:[^\s:]+:)/igm) || [])]
             .map(x => x.substring(1, x.length - 1))
             .filter(x => !x.startsWith('skin-tone-'))
-            .concat(reactedDefaults)
+          const reactionsInfo = reactedInMessage
+            .concat(theDefaultReactions)
             .reduce((acc, name) => {
               const users = reactedUsers[name] || []
               return {
@@ -183,8 +249,10 @@ export default (config, emitter, debug) => {
                 [name]: {
                   name: name,
                   count: nonRepeated(users).length,
+                  hideIfEmpty: reactedInMessage.indexOf(name) < 0 || reactedInMessage.length === 0,
                   original: users,
                   current: users.slice(),
+                  hideUsers: [],
                   final: users.slice(),
                   up: [],
                   down: []
@@ -192,24 +260,19 @@ export default (config, emitter, debug) => {
               }
             }, {})
           if (Object.keys(reactionsInfo).length > 0) {
-            const text = todayEat(reactionsInfo)
-            state.messages[key] = {
-              channel: channel,
-              user: user,
-              originalMessage: ts,
-              triggers: triggers,
-              reactions: reactionsInfo,
-              ...typeFromTriggers(triggers)
-            }
-            emitter.emit(eventTypes.OUT.webPost, 'chat.postMessage', {
-              channel: channel,
-              text: text,
-              link_names: false,
-              as_user: true
-            }, (err, response) => {
-              debug(err)
-              state.messages[key].ts = response.ts
-              fs.writeFileSync(almuerzoFile, JSON.stringify(state), 'utf8')
+            emitter.emit(eventTypes.OUT.webGet, 'conversations.members', {
+              channel: channel
+            }, (error, response) => {
+              state.messages[key] = {
+                channel: channel,
+                user: user,
+                originalMessage: ts,
+                triggers: triggers,
+                allUsers: !error ? response.members.filter(x => ignoreUsers.indexOf(x) < 0) : [],
+                reactions: reactionsInfo,
+                ...type
+              }
+              updateMessage(key, true)
             })
           }
         } else {
@@ -217,8 +280,15 @@ export default (config, emitter, debug) => {
         }
       })
     } else if (state.messages[key]) {
-      const m = state.messages[key]
-      if (allTriggers.indexOf(reaction) >= 0 && m.user === payload.user) {
+      let m = state.messages[key]
+      if (typeof m === 'string') {
+        const mm = state.messages[m]
+        const r = mm.reactions[reaction]
+        if (r) {
+          r.hideUsers.push(payload.user)
+          updateMessage(key)
+        }
+      } else if (allTriggers.indexOf(reaction) >= 0 && m.user === payload.user) {
         const m = state.messages[key]
         m.triggers.push(reaction)
         state.messages[key] = {...m, ...typeFromTriggers(m.triggers)}
@@ -238,11 +308,20 @@ export default (config, emitter, debug) => {
     const key = channel + '-' + ts
     const reaction = payload.reaction.split('..')[0]
     if (allTriggers.indexOf(reaction) < 0 && state.messages[key]) {
-      const r = state.messages[key].reactions[reaction]
-      const index = r ? r.current.lastIndexOf(payload.user) : -1
-      if (index >= 0) {
-        r.current.splice(index, 1)
-        updateMessage(key)
+      if (typeof state.messages[key] === 'string') {
+        const r = state.messages[state.messages[key]].reactions[reaction]
+        const index = r ? r.hideUsers.lastIndexOf(payload.user) : -1
+        if (index >= 0) {
+          r.hideUsers.splice(index, 1)
+          updateMessage(key)
+        }
+      } else {
+        const r = state.messages[key].reactions[reaction]
+        const index = r ? r.current.lastIndexOf(payload.user) : -1
+        if (index >= 0) {
+          r.current.splice(index, 1)
+          updateMessage(key)
+        }
       }
     } else if (allTriggers.indexOf(reaction) >= 0 && state.messages[key] && state.messages[key].user === payload.user) {
       const m = state.messages[key]
