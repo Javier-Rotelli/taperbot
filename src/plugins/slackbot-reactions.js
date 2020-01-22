@@ -4,14 +4,17 @@ import eventTypes from '../eventTypes'
 import fs from 'fs'
 
 const reactionsFile = 'data/reactions.json'
+const recentReactions = {}
 
 function flatMap (array, callback) {
   return array.reduce((acc, x) => acc.concat(callback(x)), [])
 }
 
 function reactTo (allReactions, words, emitter, ts, channel) {
+  let now = Date.now()
   // buscar reactions
-  let reactions = new Set(flatMap(words, item => allReactions[item.toLowerCase()] || []))
+  let reactions = new Set(flatMap(words, item => allReactions[item.toLowerCase()] || [])
+    .filter(r => Math.random() < Math.pow((now - (recentReactions[r] || 0)) / 10800000, 0.5)))
   // mezclar reactions
   let reactionsToAdd = []
   reactions.forEach(function (reaction) {
@@ -19,7 +22,7 @@ function reactTo (allReactions, words, emitter, ts, channel) {
     reactionsToAdd.splice(position, 0, reaction)
   })
   // recortar algunas
-  reactionsToAdd.splice(0, Math.floor(Math.random() * (reactionsToAdd.length - 1)))
+  reactionsToAdd.splice(0, Math.floor(Math.random() * reactionsToAdd.length))
   // enviar
   reactionsToAdd.forEach(function (reaction, index) {
     setTimeout(function () {
@@ -30,7 +33,8 @@ function reactTo (allReactions, words, emitter, ts, channel) {
           timestamp: ts
         },
         (_) => {})
-    }, (Math.random() + index) * 1500)
+    }, (Math.random() + index) * 4500)
+    recentReactions[reaction] = now
   })
 }
 
@@ -89,11 +93,11 @@ export default (config, emitter, debug) => {
   })
   emitter.on(eventTypes.IN.receivedOtherMessage, (payload) => {
     let words = new Set(splitWords(payload.text))
-    if (Math.random() > 0.9) {
+    if (Math.random() > 0.99) {
       // cada tanto incluimos al nombre de usuario para que no sea tan pesado
       words.add('<@' + payload.user + '>')
     }
-    if (Math.random() > 0.97) {
+    if (Math.random() > 0.999) {
       // cada tanto tanto incluimos al channel para que no sea tan pesado
       words.add('<#' + payload.channel + '>')
     }
