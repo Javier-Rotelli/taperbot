@@ -11,7 +11,7 @@ function flatMap (array, callback) {
 }
 
 function reactTo (allReactions, words, emitter, ts, channel) {
-  let now = Math.floor(Date.now())
+  let now = Date.now()
   // buscar reactions
   let reactions = new Set(flatMap(words, item => allReactions[item.toLowerCase()] || [])
     .filter(r => Math.random() < Math.pow((now - (recentReactions[r] || 0)) / 10800000, 0.5)))
