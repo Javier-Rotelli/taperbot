@@ -3,7 +3,7 @@ import commandParser from '../commandParser'
 
 export default (config, emitter, log) => {
   const api = create({
-    baseURL: 'http://ws.geeklab.com.ar/dolar/get-dolar-json.php',
+    baseURL: 'https://mercados.ambito.com',
     headers: {'Accept': 'application/json'}
   })
   emitter.on('received:message', (message) => {
@@ -11,9 +11,9 @@ export default (config, emitter, log) => {
     if (command === null || command.command !== 'dolar') {
       return
     }
-
-    api.get('').then(res => {
-      emitter.emit('send:message', `Oficial: ${res.data.libre}, Blue: ${res.data.blue}`, message.channel)
+    api.get('/dolar/informal/variacion').then((res) => {
+      const { compra, venta, fecha, variacion } = res.data;
+      emitter.emit('send:message', `💸 Compra: ${compra}, Venta: ${venta}, Variacion: ${variacion} ${variacion.startsWith('-') ? '↘️' :'↗️'} 🗓  ${fecha}`, message.channel)
     }).catch(err => { throw err })
   })
 }
