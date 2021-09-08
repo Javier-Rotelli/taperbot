@@ -28,7 +28,7 @@ export default (config, emitter, log) => {
 
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
     const command = commandParser(message.text);
-    if (command === null || (command.command !== "flip" && command.command !== "flip") ) {
+    if (command === null || (command.command !== "flip" && command.command !== "ola") ) {
       return;
     }
     const [first, ...rest] = command.command == "flip" ?frames:waves;
