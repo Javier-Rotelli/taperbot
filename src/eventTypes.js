@@ -8,6 +8,7 @@ export default {
   },
   OUT: {
     sendMessage: 'send:message',
+    updateMessage: 'update:message',
     webGet: 'web',
     webPost: 'webPost',
     startTyping: 'startTyping'

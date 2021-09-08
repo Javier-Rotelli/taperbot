@@ -7,6 +7,7 @@ import {getNextId, isFromChannels, shouldProcess, isFromUser} from './messageUti
 import adminPlugin from './plugins/admin'
 import eventTypes from './eventTypes'
 import { getFromAPI, postToAPI } from './slackWeb'
+import { emit } from 'process'
 
 const conf = getConfig()
 if (conf.debug) {
