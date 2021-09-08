@@ -1,6 +1,7 @@
 import commandParser from "../commandParser";
 import eventTypes from "../eventTypes";
 import frames from "./animations/flip.json";
+import waves from "./animations/waves.json";
 
 export default (config, emitter, log) => {
   const animate = (ts, channel, [frame, ...tail]) => {
@@ -27,10 +28,10 @@ export default (config, emitter, log) => {
 
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
     const command = commandParser(message.text);
-    if (command === null || command.command !== "flip") {
+    if (command === null || (command.command !== "flip" && command.command !== "flip") ) {
       return;
     }
-    const [first, ...rest] = frames;
+    const [first, ...rest] = command.command == "flip" ?frames:waves;
     emitter.emit(
       eventTypes.OUT.webPost,
       "chat.postMessage",
