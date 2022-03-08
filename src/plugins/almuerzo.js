@@ -227,7 +227,7 @@ export default (config, emitter, debug) => {
     const channel = payload.item.channel
     const user = payload.user
     const key = channel + '-' + ts
-    const reaction = payload.reaction.split('..')[0]
+    const reaction = payload.reaction.split('::')[0]
     if (allTriggers.indexOf(reaction) >= 0 && !state.messages[key]) {
       const triggers = [reaction]
       emitter.emit(eventTypes.OUT.startTyping, {
@@ -306,7 +306,7 @@ export default (config, emitter, debug) => {
     const ts = payload.item.ts
     const channel = payload.item.channel
     const key = channel + '-' + ts
-    const reaction = payload.reaction.split('..')[0]
+    const reaction = payload.reaction.split('::')[0]
     if (allTriggers.indexOf(reaction) < 0 && state.messages[key]) {
       if (typeof state.messages[key] === 'string') {
         const r = state.messages[state.messages[key]].reactions[reaction]
