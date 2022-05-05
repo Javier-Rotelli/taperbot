@@ -39,7 +39,7 @@ Tapebot is not a slack bot, is a slack user. Based on any @taperbot mention foll
 
 ## Base architecture
 
-<img here>
+![](https://raw.githubusercontent.com/vmariano/taperbot/imrpove/readme/Screen%20Shot%202022-05-04%20at%2023.39.18.png)
 
 
 ## 2 ingredients
