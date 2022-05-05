@@ -1,38 +1,39 @@
-import commandParser from '../commandParser'
-import { getChannels, getGroups, getUsers } from '../slackUtils'
+import commandParser from "../commandParser";
+import { getChannels, getGroups, getUsers } from "../slackUtils";
 
 export default (config, emitter, log) => {
   const processMessage = async (message) => {
-    const command = commandParser(message.text)
+    const command = commandParser(message.text);
     if (command === null) {
-      return
+      return;
     }
-    let response = null
+    let response = null;
     switch (command.command) {
-      case 'users':
-        log('listando usuarios')
+      case "users":
+        log("listando usuarios");
         response = (await getUsers(emitter))
           .map((member) => `id: ${member.id}, name: ${member.name}`)
-          .join('\n')
-        break
-      case 'channels':
-        log('listando channels')
-        response = (await getChannels(emitter))
-          .map((member) => `id: ${member.id}, name: ${member.name}`)
-          .join('\n')
-        break
-      case 'groups':
-        log('listando grupos')
-        response = (await getGroups(emitter))
-          .map((member) => `id: ${member.id}, name: ${member.name}`)
-          .join('\n')
-        break
+          .join("\n");
+        break;
+      case "channels":
+        log("listando channels");
+        try {
+          response = (await getChannels(emitter))
+            .map(
+              (channel) =>
+                `id: ${channel.id}, name: ${channel.name}, is_group: ${channel.is_group}`
+            )
+            .join("\n");
+        } catch (err) {
+          log(err);
+        }
+        break;
     }
 
     if (response !== null) {
-      emitter.emit('send:message', response, message.channel)
+      emitter.emit("send:message", response, message.channel);
     }
-  }
+  };
 
-  emitter.on('received:message', processMessage)
-}
+  emitter.on("received:message", processMessage);
+};

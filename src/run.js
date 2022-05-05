@@ -86,10 +86,10 @@ const startServer = (url) => {
 };
 
 const sendMessage = (ws, message) => {
-  // if (process.env.NODE_ENV !== 'production') {
-  //   devLog('Message to send: %O', message)
-  //   return
-  // }
+  if (process.env.NODE_ENV !== "production") {
+    devLog("Message to send: %O", message);
+    return;
+  }
 
   if (message.id === undefined) {
     message.id = getNextId();
