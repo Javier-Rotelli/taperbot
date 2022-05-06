@@ -2,6 +2,11 @@
 
 Taperbot!
 
+## Setup
+```
+npm install
+````
+
 [![Build Status](https://travis-ci.org/Javier-Rotelli/taperbot.svg?branch=master)](https://travis-ci.org/Javier-Rotelli/taperbot)
 
 # Setup
@@ -30,6 +35,13 @@ Make sure you first change the [api token](https://api.slack.com/custom-integrat
 ```javascript
 yarn test
 ```
+
+## Run from cli
+```
+npm run cli /yourplugincommand
+````
+
+-------
 
 Credits for @javierfernandes for the initial code
 
