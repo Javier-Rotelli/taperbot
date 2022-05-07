@@ -3,7 +3,6 @@ var pkg = require("./package.json");
 module.exports = function (shipit) {
   require("shipit-deploy")(shipit);
   require("shipit-shared")(shipit);
-  require("shipit-nvm")(shipit);
   require("shipit-yarn")(shipit);
   require("shipit-pm2")(shipit);
   var config = require("./shipitfile.config.json");
@@ -22,10 +21,6 @@ module.exports = function (shipit) {
         overwrite: true,
         dirs: ["data"],
         files: ["config.yml"],
-      },
-      nvm: {
-        remote: true,
-        sh: "~/.nvm/nvm.sh",
       },
     },
     staging: {
