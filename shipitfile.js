@@ -23,6 +23,10 @@ module.exports = function (shipit) {
         dirs: ["data"],
         files: ["config.yml"],
       },
+      nvm: {
+        remote: true,
+        sh: "~/.nvm/nvm.sh",
+      },
     },
     staging: {
       servers: {
