@@ -15,7 +15,7 @@
   "author": "Javier Rotelli",
   "repository": {
     "type": "git",
-    "url": "git://github.com/Javier-Rotelli/taperbot.git"
+    "url": "git@github.com:Javier-Rotelli/taperbot.git"
   },
   "license": "ISC",
   "nodemonConfig": {
@@ -47,6 +47,7 @@
     "shipit-cli": "^5.3.0",
     "shipit-deploy": "^5.3.0",
     "shipit-npm": "^0.2.0",
+    "shipit-nvm": "^0.0.6",
     "shipit-pm2": "0.0.4",
     "shipit-shared": "^4.4.2",
     "shipit-yarn": "^0.2.0",

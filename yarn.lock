@@ -2399,6 +2399,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dayjs@npm:^1.11.1":
+  version: 1.11.2
+  resolution: "dayjs@npm:1.11.2"
+  checksum: 78f8bd04a9e5f5554aa06eacda65a7d59e162d39f621a46fd34fb3b51367c3662426d86b4e2f4ac535f81e0c4d5af3e8a83b37e672412eb556267d726c61f8f3
+  languageName: node
+  linkType: hard
+
 "debug@npm:4, debug@npm:4.3.4, debug@npm:^4.1.0, debug@npm:^4.1.1, debug@npm:^4.3.2, debug@npm:^4.3.3, debug@npm:^4.3.4":
   version: 4.3.4
   resolution: "debug@npm:4.3.4"
@@ -7258,6 +7265,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"shipit-nvm@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "shipit-nvm@npm:0.0.6"
+  dependencies:
+    bluebird: ^2.9.1
+    chalk: ^0.5.1
+    path-is-absolute: ^1.0.0
+    path2: ^0.1.0
+    shipit-utils: ^1.1.3
+    sprintf-js: ^1.0.2
+    yargs: ^3.4.5
+  checksum: dc93d561c37e436b79e6c9dfea6e4096cb44e5a7b9956535d4f88ea19967745a62ecf02f4afdf56109d7e74d649c2e5202c950fc11dcc7ae4ab945e945ad2dfe
+  languageName: node
+  linkType: hard
+
 "shipit-pm2@npm:0.0.4":
   version: 0.0.4
   resolution: "shipit-pm2@npm:0.0.4"
@@ -7392,6 +7414,7 @@ __metadata:
     babel-preset-stage-2: ^6.24.1
     babel-register: ^6.26.0
     chai: ^4.3.6
+    dayjs: ^1.11.1
     debug: ^4.3.4
     es6-promisify: ^7.0.0
     google-spreadsheet: ^3.2.0
@@ -7404,6 +7427,7 @@ __metadata:
     shipit-cli: ^5.3.0
     shipit-deploy: ^5.3.0
     shipit-npm: ^0.2.0
+    shipit-nvm: ^0.0.6
     shipit-pm2: 0.0.4
     shipit-shared: ^4.4.2
     shipit-yarn: ^0.2.0
