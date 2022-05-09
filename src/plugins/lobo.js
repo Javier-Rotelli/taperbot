@@ -18,7 +18,8 @@ export default (config, emitter, log) => {
         config.channels[message.channel],
         `<@${message.user}>`,
         message.text
-      )
+      ),
+      config.platea
     );
   });
 };
