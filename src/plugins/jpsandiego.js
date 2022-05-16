@@ -1,4 +1,4 @@
-import commandParser from "../CommandParser";
+import commandParser from "../commandParser";
 import eventTypes from "../eventTypes";
 
 let where = "";
