@@ -28,10 +28,13 @@ export default (config, emitter, log) => {
 
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
     const command = commandParser(message.text);
-    if (command === null || (command.command !== "flip" && command.command !== "ola") ) {
+    if (
+      command === null ||
+      (command.command !== "flip" && command.command !== "ola")
+    ) {
       return;
     }
-    const [first, ...rest] = command.command == "flip" ?frames:waves;
+    const [first, ...rest] = command.command == "flip" ? frames : waves;
     emitter.emit(
       eventTypes.OUT.webPost,
       "chat.postMessage",

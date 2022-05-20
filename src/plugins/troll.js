@@ -1,34 +1,44 @@
-import commandParser from '../commandParser'
-import eventTypes from '../eventTypes'
+import commandParser from "../commandParser";
+import eventTypes from "../eventTypes";
 
 export default (config, emitter, debug) => {
-  const lockedChannels = new Set()
+  const lockedChannels = new Set();
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
-    const command = commandParser(message.text)
-    if (command === null || (command.command !== 'lock' && command.command !== 'unlock')) {
-      return
+    const command = commandParser(message.text);
+    if (
+      command === null ||
+      (command.command !== "lock" && command.command !== "unlock")
+    ) {
+      return;
     }
-    if (command.command === 'lock') {
-      lockedChannels.add(message.channel)
-      emitter.emit('send:message', 'TODOS CON LAS MANOS ARRIBA, ESTE CHANNEL SE ENCUENTRA BLOQUEADO', message.channel)
+    if (command.command === "lock") {
+      lockedChannels.add(message.channel);
+      emitter.emit(
+        "send:message",
+        "TODOS CON LAS MANOS ARRIBA, ESTE CHANNEL SE ENCUENTRA BLOQUEADO",
+        message.channel
+      );
     } else {
-      lockedChannels.delete(message.channel)
+      lockedChannels.delete(message.channel);
     }
-  })
+  });
 
   emitter.on(eventTypes.IN.memberLeftChannel, (payload) => {
     if (!lockedChannels.has(payload.channel)) {
-      return
+      return;
     }
-    emitter.emit(eventTypes.OUT.webPost, 'channels.invite',
+    emitter.emit(
+      eventTypes.OUT.webPost,
+      "channels.invite",
       {
         channel: payload.channel,
-        user: payload.user
+        user: payload.user,
       },
       (err) => {
         if (err) {
-          debug(err)
+          debug(err);
         }
-      })
-  })
-}
+      }
+    );
+  });
+};

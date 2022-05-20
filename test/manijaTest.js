@@ -1,24 +1,24 @@
 /* eslint-env mocha */
-import chai from 'chai'
+import chai from "chai";
 
-import { getLetsPlayFriendlyMessage } from '../src/plugins/manija'
+import { getLetsPlayFriendlyMessage } from "../src/plugins/manija";
 
-const expect = chai.expect
+const expect = chai.expect;
 
-describe('Test getLetsPlayFriendlyMessage', function () {
-  it('should return a message for multiple rivals', function (done) {
-    const rivals = '@jarro(v), @ema(l)'
-    const result = getLetsPlayFriendlyMessage(rivals)
+describe("Test getLetsPlayFriendlyMessage", function () {
+  it("should return a message for multiple rivals", function (done) {
+    const rivals = "@jarro(v), @ema(l)";
+    const result = getLetsPlayFriendlyMessage(rivals);
 
-    expect(result).to.be.a('string')
-    done()
-  })
+    expect(result).to.be.a("string");
+    done();
+  });
 
-  it('should return a message for one rival', function (done) {
-    const rivals = '@jarro(l)'
-    const result = getLetsPlayFriendlyMessage(rivals)
+  it("should return a message for one rival", function (done) {
+    const rivals = "@jarro(l)";
+    const result = getLetsPlayFriendlyMessage(rivals);
 
-    expect(result).to.be.a('string')
-    done()
-  })
-})
+    expect(result).to.be.a("string");
+    done();
+  });
+});

@@ -3,9 +3,10 @@
 Taperbot!
 
 ## Setup
+
 ```
 npm install
-````
+```
 
 [![Build Status](https://travis-ci.org/Javier-Rotelli/taperbot.svg?branch=master)](https://travis-ci.org/Javier-Rotelli/taperbot)
 
@@ -37,11 +38,12 @@ yarn test
 ```
 
 ## Run from cli
+
 ```
 npm run cli /yourplugincommand
-````
+```
 
--------
+---
 
 Credits for @javierfernandes for the initial code
 
@@ -52,7 +54,6 @@ Tapebot is not a slack bot, is a slack user. Based on any @taperbot mention foll
 ## Base architecture
 
 ![](https://raw.githubusercontent.com/vmariano/taperbot/imrpove/readme/Screen%20Shot%202022-05-04%20at%2023.39.18.png)
-
 
 ## 2 ingredients
 
@@ -83,6 +84,7 @@ export default (config, emitter, log) => {
 ```
 
 Where:
+
 - config is plugin configuration.
 - emmiter is a EventEmitter to allow us send and receive events for core functionality.
 - log is custom log actions we want for our plugin.
