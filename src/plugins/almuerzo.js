@@ -28,7 +28,7 @@ export default (config, emitter, debug) => {
     state = JSON.parse(fs.readFileSync(almuerzoFile, "utf8"));
     Object.keys(state.messages).forEach((k) => {
       const almuerzo = state.messages[k];
-      const ts = almuerzo.ts || almuerzo.split("-")[1];
+      const ts = almuerzo.ts || k.split("-")[1];
       const timeoutDate = new Date(ts * 1000 + timeout);
       if (timeoutDate < new Date()) {
         // muy viejo, lo borramos
