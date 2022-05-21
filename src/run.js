@@ -1,5 +1,4 @@
-import WebSocket from "ws";
-import request from "request";
+const { App } = require("@slack/bolt");
 import { EventEmitter } from "events";
 import createDebug from "debug";
 import { getConfig } from "./config";
@@ -13,135 +12,101 @@ import adminPlugin from "./plugins/admin";
 import eventTypes from "./eventTypes";
 import { getFromAPI, postToAPI } from "./slackWeb";
 
-const conf = getConfig();
-if (conf.debug) {
-  process.env["DEBUG"] = conf.debug === true ? "*" : conf.debug;
-}
-const log = createDebug("taperbot:core");
-const devLog = createDebug("taperbot:core:dev");
-
-const startServer = (url) => {
-  const ws = new WebSocket(url);
-  const emitter = new EventEmitter();
-
-  ws.on("open", () => {
-    log("Connected");
-    resetPing(ws);
-  });
-
-  ws.on("error", (error) => {
-    log("Error on Websocket server: %o", error);
-  });
-
-  ws.on("message", (rawMessage) => {
-    const payload = JSON.parse(rawMessage);
-    const ignore = isFromChannels(payload, conf.ignoredChannels);
-    log(payload);
-    switch (payload.type) {
-      case "message":
-        if (!ignore && shouldProcess(payload, conf.userId)) {
-          emitter.emit(eventTypes.IN.receivedMessage, payload);
-        } else if (!isFromUser(payload, conf.userId)) {
-          emitter.emit(eventTypes.IN.receivedOtherMessage, payload);
-        }
-        break;
-      case "reaction_added":
-        emitter.emit(eventTypes.IN.reactionAdded, payload);
-        break;
-      case "reaction_removed":
-        emitter.emit(eventTypes.IN.reactionRemoved, payload);
-        break;
-      case "member_left_channel":
-        emitter.emit(eventTypes.IN.memberLeftChannel, payload);
-        break;
-    }
-  });
-
-  emitter.on(eventTypes.OUT.sendMessage, (content, channel, id) => {
-    if (conf.ignoredChannels.includes(channel)) {
-      return;
-    }
-    sendMessage(ws, {
-      channel: channel,
-      id,
-      text: content,
-      type: "message",
-    });
-  });
-
-  emitter.on(eventTypes.OUT.startTyping, (message) => {
-    sendMessage(ws, {
-      channel: message.channel,
-      id: getNextId(),
-      type: "typing",
-      reply_to: message.id,
-    });
-  });
-
-  emitter.on(eventTypes.OUT.webGet, getFromAPI(conf, log));
-
-  emitter.on(eventTypes.OUT.webPost, postToAPI(conf, log));
-
-  initPlugins(conf.plugins, emitter);
-};
-
-const sendMessage = (ws, message) => {
-  if (process.env.NODE_ENV !== "production") {
-    devLog("Message to send: %O", message);
-    return;
-  }
-
-  if (message.id === undefined) {
-    message.id = getNextId();
-  }
-  ws.send(JSON.stringify(message));
-  resetPing(ws);
-};
-
-const initPlugins = (plugins, emitter) => {
+const initPlugins = (config, emitter) => {
   const pluginsFolder = "./plugins/";
 
-  return Object.keys(plugins)
+  return Object.keys(config.plugins)
     .map((pluginName) => {
       log(`Iniciando plugin ${pluginName}`);
-      const pluginConfig = plugins[pluginName];
+      const pluginConfig = config.plugins[pluginName];
       return require(`${pluginsFolder}${pluginName}`).default(
         pluginConfig,
         emitter,
         createDebug(`taperbot:${pluginName}`)
       );
     })
-    .concat([adminPlugin(conf, emitter, createDebug("taperbot:admin"))]);
+    .concat([adminPlugin(config, emitter, createDebug("taperbot:admin"))]);
 };
 
-const getUrl = (apiToken) =>
-  "https://slack.com/api/rtm.start?token=" + apiToken;
+const log = createDebug("taperbot:core");
+const devLog = createDebug("taperbot:core:dev");
 
-request(getUrl(conf.apiToken), function (err, response, body) {
-  if (!err && response.statusCode === 200) {
-    const res = JSON.parse(body);
-    if (res.ok) {
-      startServer(res.url);
-    } else {
-      console.error("error connecting to slack");
-      console.error(body);
-    }
+const config = getConfig();
+log(config);
+const app = new App({
+  token: config.botToken,
+  signingSecret: config.signingSecret,
+  socketMode: true,
+  appToken: config.appToken,
+});
+
+const emitter = new EventEmitter();
+
+app.message(async ({ message }) => {
+  if (shouldProcess(message, config.userId)) {
+    emitter.emit(eventTypes.IN.receivedMessage, message);
+  } else if (!isFromUser(message, config.userId)) {
+    emitter.emit(eventTypes.IN.receivedOtherMessage, message);
   }
 });
 
-let pingTimer;
-const resetPing = (ws) => {
-  clearTimeout(pingTimer);
-  pingTimer = setTimeout(sendPing(ws), 5000);
+app.event("reaction_added", async ({ event, logger }) => {
+  try {
+    emitter.emit(eventTypes.IN.reactionAdded, event);
+  } catch (error) {
+    logger.error(error);
+  }
+});
+
+app.event("reaction_removed", async ({ event, logger }) => {
+  try {
+    emitter.emit(eventTypes.IN.reactionRemoved, event);
+  } catch (error) {
+    logger.error(error);
+  }
+});
+
+initPlugins(config, emitter);
+
+const startServer = async () => {
+  await app.start(process.env.PORT || 3000);
+  log("Connected");
+
+  emitter.on(eventTypes.OUT.sendMessage, (content, channel, id) => {
+    if (config.ignoredChannels.includes(channel)) {
+      return;
+    }
+    sendMessage(channel, content, id);
+  });
+
+  emitter.on(eventTypes.OUT.webGet, getFromAPI(app, config, log));
+
+  emitter.on(eventTypes.OUT.webPost, postToAPI(app, config, log));
+
+  // TODO: migrar esto
+  // emitter.on(eventTypes.OUT.startTyping, (message) => {
+  //   sendMessage(ws, {
+  //     channel: message.channel,
+  //     id: getNextId(),
+  //     type: "typing",
+  //     reply_to: message.id,
+  //   });
+  // });
 };
 
-const sendPing = (ws) => () => {
-  ws.send(
-    JSON.stringify({
-      id: getNextId(),
-      type: "ping",
-    })
-  );
-  log("sent ping");
-  resetPing(ws);
+const sendMessage = (channel, content, id = getNextId()) => {
+  const message = {
+    token: config.botToken,
+    channel: channel,
+    id,
+    text: content,
+    type: "message",
+  };
+  if (process.env.NODE_ENV !== "production") {
+    devLog("Message to send: %O", message);
+    // return;
+  }
+  app.client.chat.postMessage(message);
 };
+
+startServer();
