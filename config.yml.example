@@ -1,6 +1,9 @@
 owner:
 apiToken: thisIsASecretToken
-userId: U3FTH76RZ
+signingSecret: aSigningSecret
+appToken: anAppToken
+botToken: ABotToken
+userId: U03E7KLHGTF
 debug: true
 ignoredChannels:
   - C02TUBDTJ #General

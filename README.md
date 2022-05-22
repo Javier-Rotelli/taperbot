@@ -40,7 +40,7 @@ yarn test
 ## Run from cli
 
 ```
-npm run cli /yourplugincommand
+yarn cli /yourplugincommand
 ```
 
 ---
