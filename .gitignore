@@ -36,6 +36,9 @@ node_modules
 # config file
 config.yml
 
+#plugins data directory
+data/
+
 # IDE config
 .idea/
 

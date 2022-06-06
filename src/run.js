@@ -1,6 +1,7 @@
 const { App } = require("@slack/bolt");
 import { EventEmitter } from "events";
 import createDebug from "debug";
+
 import { getConfig } from "./config";
 import {
   getNextId,
@@ -8,31 +9,19 @@ import {
   shouldProcess,
   isFromUser,
 } from "./messageUtil";
-import adminPlugin from "./plugins/admin";
+
+import { initPlugins } from "./plugins";
 import eventTypes from "./eventTypes";
 import { getFromAPI, postToAPI } from "./slackWeb";
-
-const initPlugins = (config, emitter) => {
-  const pluginsFolder = "./plugins/";
-
-  return Object.keys(config.plugins)
-    .map((pluginName) => {
-      log(`Iniciando plugin ${pluginName}`);
-      const pluginConfig = config.plugins[pluginName];
-      return require(`${pluginsFolder}${pluginName}`).default(
-        pluginConfig,
-        emitter,
-        createDebug(`taperbot:${pluginName}`)
-      );
-    })
-    .concat([adminPlugin(config, emitter, createDebug("taperbot:admin"))]);
-};
 
 const log = createDebug("taperbot:core");
 const devLog = createDebug("taperbot:core:dev");
 
 const config = getConfig();
+
+log("initing with config:");
 log(config);
+
 const app = new App({
   token: config.botToken,
   signingSecret: config.signingSecret,
@@ -66,7 +55,7 @@ app.event("reaction_removed", async ({ event, logger }) => {
   }
 });
 
-initPlugins(config, emitter);
+initPlugins(config, emitter, app);
 
 const startServer = async () => {
   await app.start(process.env.PORT || 3000);
