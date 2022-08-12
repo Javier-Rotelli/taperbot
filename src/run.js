@@ -95,12 +95,15 @@ const startServer = async () => {
 };
 
 const sendMessage = (channel, content, id = getNextId()) => {
+  const data = typeof content === 'object' ? content : {
+    text: content
+  }
   const message = {
     token: config.botToken,
     channel: channel,
     id,
-    text: content,
     type: "message",
+    ...data
   };
   if (process.env.NODE_ENV !== "production") {
     devLog("Message to send: %O", message);
