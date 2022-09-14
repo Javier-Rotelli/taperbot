@@ -2,6 +2,14 @@ import { omit } from "ramda";
 import commandParser from "../commandParser";
 import eventTypes from "../eventTypes";
 
+const getFormattedConfig = (config) => {
+  const sanitizedConfig = omit(
+    ["apiToken", "signingSecret", "appToken", "botToken"],
+    config
+  );
+  return JSON.stringify(sanitizedConfig, null, 4);
+};
+
 export default (config, emitter, log) => {
   const processMessage = async (message) => {
     const command = commandParser(message.text);
@@ -19,10 +27,9 @@ export default (config, emitter, log) => {
         process.exit();
         break;
       case "config":
-        const txt = JSON.stringify(omit(["apiToken"], config), null, 4);
         emitter.emit(
           eventTypes.OUT.sendMessage,
-          "```" + txt + "```",
+          "```" + getFormattedConfig(config) + "```",
           message.channel
         );
     }
