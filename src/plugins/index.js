@@ -20,10 +20,14 @@ export const initPlugins = async (config, emitter, app) => {
       } else {
         // V2
         log(`${pluginName} esta en la nueva version 🚀`);
-        return require(`${pluginsFolder}v2/${pluginName}`).default({
+        const plugin = require(`${pluginsFolder}v2/${pluginName}`).default({
           app,
           config: pluginConfig,
           log: createDebug(`taperbot:${pluginName}`),
+        });
+
+        plugin.commands.forEach((cm) => {
+          app.command(cm.command, cm.action);
         });
       }
     } catch (error) {
