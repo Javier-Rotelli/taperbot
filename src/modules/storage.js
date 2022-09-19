@@ -2,7 +2,7 @@ import fs from 'fs'
 
 let stores = {}
 
-export default (pluginName, { writeDelay = 1000 } = {}) => ({
+export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) => ({
   createStore: (root, defaultValue) => {
     const suffix = root ? `-${root}` : ''
     const filename = `data/${pluginName}${suffix}.json`
@@ -11,7 +11,10 @@ export default (pluginName, { writeDelay = 1000 } = {}) => ({
     }
     const value = (fs.existsSync(filename)) ?
       JSON.parse(fs.readFileSync(filename, "utf8")) : defaultValue
-    const writeFile = (value) => fs.writeFileSync(filename, JSON.stringify(value), "utf8")
+    const writeFile = (value) => {
+      fs.writeFileSync(filename, JSON.stringify(value), "utf8")
+      verbose && log("storage write")
+    }
     const store = {
       value: value,
     }
@@ -25,6 +28,7 @@ export default (pluginName, { writeDelay = 1000 } = {}) => ({
       }
     }
     store.set = (newValue) => {
+      verbose && log("storage set value")
       store.value = newValue
       throttleWrite()
     }
@@ -48,6 +52,7 @@ export default (pluginName, { writeDelay = 1000 } = {}) => ({
       fs.existsSync(filename) && fs.unlinkSync(filename)
     }
     stores[filename] = store
+    verbose && log("storage created")
     return store
   },
   _getCurrentStores: () => stores,

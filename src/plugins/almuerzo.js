@@ -1,16 +1,15 @@
 import eventTypes from "../eventTypes";
 import splitWords from "../splitWords";
-import fs from "fs";
 
 import { userToString } from "../slackUtils";
 
 const almuerzoFile = "data/almuerzo.json";
 
 /** @type { import("./plugin").TaperbotPlugin } */
-export default ({ config, emitter, log }) => {
-  let state = {
+export default ({ config, emitter, log, storage }) => {
+  let store = storage.createStore(false, {
     messages: {},
-  };
+  });
   const triggerReaction = config.reaction;
   const countReaction = config.countReaction;
   const reverseCountReaction = config.reverseCountReaction;
@@ -25,15 +24,14 @@ export default ({ config, emitter, log }) => {
   const reverseCountMessage = config.reverseCountMessage;
   const ignoreUsers = config.ignoreUsers;
   const timeout = config.timeout;
-  if (fs.existsSync(almuerzoFile)) {
-    state = JSON.parse(fs.readFileSync(almuerzoFile, "utf8"));
-    Object.keys(state.messages).forEach((k) => {
-      const almuerzo = state.messages[k];
+  const messages = store.value.messages;
+  Object.keys(messages).forEach((k) => {
+      const almuerzo = messages[k];
       const ts = almuerzo.ts || k.split("-")[1];
       const timeoutDate = new Date(ts * 1000 + timeout);
       if (timeoutDate < new Date()) {
         // muy viejo, lo borramos
-        state.messages[k] = undefined;
+        messages[k] = undefined;
         return;
       }
       if (typeof almuerzo === "string") {
@@ -80,17 +78,16 @@ export default ({ config, emitter, log }) => {
                   });
                   updateMessage(k);
                 } else {
-                  debug(error);
+                  log(error);
                 }
               }
             );
           } else {
-            debug(error);
+            log(error);
           }
         }
       );
-    });
-  }
+  });
 
   function applyAll(previous, updated) {
     let retval = previous.concat(updated);
@@ -100,9 +97,10 @@ export default ({ config, emitter, log }) => {
     return retval;
   }
   function updateMessage(key, isNew) {
-    let message = state.messages[key];
+    store.set(store.value); // storage api usage is not optimal // TODO: improve
+    let message = store.value.messages[key];
     if (typeof message === "string") {
-      message = state.messages[message];
+      message = store.value.messages[message];
     }
     Object.values(message.reactions).forEach((r) => {
       const current = nonRepeated(r.current);
@@ -167,10 +165,9 @@ export default ({ config, emitter, log }) => {
           as_user: true,
         },
         (err, response) => {
-          debug(err);
-          state.messages[key].ts = response.ts;
-          state.messages[message.channel + "-" + response.ts] = key;
-          fs.writeFileSync(almuerzoFile, JSON.stringify(state), "utf8");
+          log(err);
+          store.value.messages[key].ts = response.ts;
+          store.value.messages[message.channel + "-" + response.ts] = key;
         }
       );
     } else {
@@ -183,10 +180,9 @@ export default ({ config, emitter, log }) => {
           ts: message.ts,
         },
         (error) => {
-          debug(error);
+          log(error);
         }
       );
-      fs.writeFileSync(almuerzoFile, JSON.stringify(state), "utf8");
     }
   }
 
@@ -264,7 +260,7 @@ export default ({ config, emitter, log }) => {
         inclusive: true,
       },
       (error, response) => {
-        debug(error);
+        log(error);
         let originalMessage;
         if (response.ok && (originalMessage = response.messages[0])) {
           emitter.emit(
@@ -309,7 +305,7 @@ export default ({ config, emitter, log }) => {
     const user = payload.user;
     const key = channel + "-" + ts;
     const reaction = payload.reaction.split("::")[0];
-    if (allTriggers.indexOf(reaction) >= 0 && !state.messages[key]) {
+    if (allTriggers.indexOf(reaction) >= 0 && !store.value.messages[key]) {
       const triggers = [reaction];
       emitter.emit(
         eventTypes.OUT.startTyping,
@@ -319,7 +315,7 @@ export default ({ config, emitter, log }) => {
         (_) => {}
       );
       const type = typeFromTriggers(triggers);
-      !state.messages[key] &&
+      !store.value.messages[key] &&
         fetchReactedUsers(channel, ts, (error, reactedUsers, message) => {
           if (reactedUsers) {
             const theDefaultReactions = type.isReverseCount
@@ -359,7 +355,7 @@ export default ({ config, emitter, log }) => {
                   channel: channel,
                 },
                 (error, response) => {
-                  state.messages[key] = {
+                  store.value.messages[key] = {
                     channel: channel,
                     user: user,
                     originalMessage: ts,
@@ -377,13 +373,13 @@ export default ({ config, emitter, log }) => {
               );
             }
           } else {
-            debug(error);
+            log(error);
           }
         });
-    } else if (state.messages[key]) {
-      let m = state.messages[key];
+    } else if (store.value.messages[key]) {
+      let m = store.value.messages[key];
       if (typeof m === "string") {
-        const mm = state.messages[m];
+        const mm = store.value.messages[m];
         const r = mm.reactions[reaction];
         if (r) {
           r.hideUsers.push(payload.user);
@@ -393,9 +389,9 @@ export default ({ config, emitter, log }) => {
         allTriggers.indexOf(reaction) >= 0 &&
         m.user === payload.user
       ) {
-        const m = state.messages[key];
+        const m = store.value.messages[key];
         m.triggers.push(reaction);
-        state.messages[key] = { ...m, ...typeFromTriggers(m.triggers) };
+        store.value.messages[key] = { ...m, ...typeFromTriggers(m.triggers) };
         updateMessage(key);
       } else {
         const r = m.reactions[reaction];
@@ -411,16 +407,16 @@ export default ({ config, emitter, log }) => {
     const channel = payload.item.channel;
     const key = channel + "-" + ts;
     const reaction = payload.reaction.split("::")[0];
-    if (allTriggers.indexOf(reaction) < 0 && state.messages[key]) {
-      if (typeof state.messages[key] === "string") {
-        const r = state.messages[state.messages[key]].reactions[reaction];
+    if (allTriggers.indexOf(reaction) < 0 && store.value.messages[key]) {
+      if (typeof store.value.messages[key] === "string") {
+        const r = store.value.messages[store.value.messages[key]].reactions[reaction];
         const index = r ? r.hideUsers.lastIndexOf(payload.user) : -1;
         if (index >= 0) {
           r.hideUsers.splice(index, 1);
           updateMessage(key);
         }
       } else {
-        const r = state.messages[key].reactions[reaction];
+        const r = store.value.messages[key].reactions[reaction];
         const index = r ? r.current.lastIndexOf(payload.user) : -1;
         if (index >= 0) {
           r.current.splice(index, 1);
@@ -429,16 +425,16 @@ export default ({ config, emitter, log }) => {
       }
     } else if (
       allTriggers.indexOf(reaction) >= 0 &&
-      state.messages[key] &&
-      state.messages[key].user === payload.user
+      store.value.messages[key] &&
+      store.value.messages[key].user === payload.user
     ) {
-      const m = state.messages[key];
-      debug(m);
+      const m = store.value.messages[key];
+      log(m);
       if (m.triggers.length > 1) {
         const index = m.triggers.lastIndexOf(reaction);
         if (index >= 0) {
           m.triggers.splice(index, 1);
-          state.messages[key] = { ...m, ...typeFromTriggers(m.triggers) };
+          store.value.messages[key] = { ...m, ...typeFromTriggers(m.triggers) };
           updateMessage(key);
         }
         return;
@@ -452,10 +448,9 @@ export default ({ config, emitter, log }) => {
         },
         (error) => {
           if (!error) {
-            state.messages[key] = undefined;
-            fs.writeFileSync(almuerzoFile, JSON.stringify(state), "utf8");
+            store.value.messages[key] = undefined;
           } else {
-            debug(error);
+            log(error);
           }
         }
       );
@@ -467,7 +462,7 @@ export default ({ config, emitter, log }) => {
       (payload.previous_message && payload.previous_message.thread_ts);
     const channel = payload.channel;
     const key = channel + "-" + ts;
-    if (!state.messages[key]) {
+    if (!store.value.messages[key]) {
       return;
     }
     let newText;
@@ -487,12 +482,12 @@ export default ({ config, emitter, log }) => {
     }
     let r;
     const added = countFromText(newText);
-    r = added && state.messages[key].reactions[added.name];
+    r = added && store.value.messages[key].reactions[added.name];
     if (r) {
       r.current = r.current.concat(added.users);
     }
     const deleted = countFromText(oldText);
-    r = deleted && state.messages[key].reactions[deleted.name];
+    r = deleted && store.value.messages[key].reactions[deleted.name];
     if (r) {
       deleted.users.forEach((u) => {
         const index = r.current.lastIndexOf(u);

@@ -22,12 +22,13 @@ const initPlugins = (config, emitter) => {
       const pluginConfig = config.plugins[pluginName];
       return [pluginName, require(`${pluginsFolder}${pluginName}`).default, pluginConfig];
     }).concat([["admin", adminPlugin, config]]).forEach( ([pluginName, plugin, config]) => {
-        plugin({
-          config,
-          emitter,
-          debug: createDebug(`taperbot:${pluginName}`),
-          storage: createStorage(pluginName),
-        })
+      const log = createDebug(`taperbot:${pluginName}`)
+      plugin({
+        config,
+        emitter,
+        log,
+        storage: createStorage(pluginName, { log }),
+      })
     });
 };
 
