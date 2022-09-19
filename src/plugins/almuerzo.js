@@ -6,7 +6,8 @@ import { userToString } from "../slackUtils";
 
 const almuerzoFile = "data/almuerzo.json";
 
-export default (config, emitter, debug) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   let state = {
     messages: {},
   };

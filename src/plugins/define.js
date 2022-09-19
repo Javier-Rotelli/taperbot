@@ -2,7 +2,8 @@ import { create } from "apisauce";
 import { take, forEach, propOr, compose, map, ifElse, lt, length } from "ramda";
 import commandParser from "../commandParser";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   // define the api
   const api = create({
     baseURL: "http://api.urbandictionary.com/v0/define",

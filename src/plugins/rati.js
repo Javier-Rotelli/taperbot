@@ -1,4 +1,5 @@
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   emitter.on("reaction:added", (payload) => {
     if (
       payload.item.type === "message" &&

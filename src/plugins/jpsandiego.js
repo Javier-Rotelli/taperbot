@@ -3,7 +3,8 @@ import eventTypes from "../eventTypes";
 
 let where = "";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
     log(message);
     const command = commandParser(message.text);

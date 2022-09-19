@@ -27,7 +27,8 @@ const weekDaysLocale = [
 
 import commandParser from "../commandParser";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   emitter.on("received:message", (message) => {
     const command = commandParser(message.text);
     if (command === null || command.command !== "proximoferiado") {

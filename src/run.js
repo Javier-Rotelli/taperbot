@@ -11,6 +11,7 @@ import {
 import adminPlugin from "./plugins/admin";
 import eventTypes from "./eventTypes";
 import { getFromAPI, postToAPI } from "./slackWeb";
+import createStorage from "./modules/storage";
 
 const initPlugins = (config, emitter) => {
   const pluginsFolder = "./plugins/";
@@ -19,13 +20,15 @@ const initPlugins = (config, emitter) => {
     .map((pluginName) => {
       log(`Iniciando plugin ${pluginName}`);
       const pluginConfig = config.plugins[pluginName];
-      return require(`${pluginsFolder}${pluginName}`).default(
-        pluginConfig,
-        emitter,
-        createDebug(`taperbot:${pluginName}`)
-      );
-    })
-    .concat([adminPlugin(config, emitter, createDebug("taperbot:admin"))]);
+      return [pluginName, require(`${pluginsFolder}${pluginName}`).default, pluginConfig];
+    }).concat([["admin", adminPlugin, config]]).forEach( ([pluginName, plugin, config]) => {
+        plugin({
+          config,
+          emitter,
+          debug: createDebug(`taperbot:${pluginName}`),
+          storage: createStorage(pluginName),
+        })
+    });
 };
 
 const log = createDebug("taperbot:core");

@@ -17,7 +17,8 @@ function popMatch(text) {
 const showMatches = (text) =>
   queue.map((match, index) => `${index} <@${match.join("> - <@")}>`).join("\n");
 
-export default (config, emitter) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter }) => {
   emitter.on("received:message", (message) => {
     const command = commandParser(message.text);
     if (command === null) {

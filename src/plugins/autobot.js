@@ -1,6 +1,7 @@
 /* eslint-disable */
 /* el linter se queja y con razon, esto no es una buena idea */
-export default (config, emitter) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   emitter.on("received:message", (message) => {
     if (!message.text.includes("code: ")) {
       return;

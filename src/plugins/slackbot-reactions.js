@@ -46,7 +46,8 @@ function reactTo(allReactions, words, emitter, ts, channel) {
   });
 }
 
-export default (config, emitter, debug) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const deleteReaction = config.deleteReaction;
   let allReactions = {};
   if (fs.existsSync(reactionsFile)) {
@@ -139,7 +140,7 @@ export default (config, emitter, debug) => {
             ts: payload.item.ts,
           },
           (error) => {
-            debug(error);
+            log(error);
           }
         );
       } else {
@@ -154,7 +155,7 @@ export default (config, emitter, debug) => {
           },
           (error, response) => {
             if (error) {
-              debug(error);
+              log(error);
             } else if (response.messages.length > 0) {
               response.messages[0].reactions.forEach((r) => {
                 if (r.users.indexOf(config.userId) >= 0) {

@@ -6,7 +6,8 @@ const forwardTemplate = (channel, user, text) =>({
 > ${text.replace(/\n/g, "\n> ")}`
 });
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   emitter.on(eventTypes.IN.receivedOtherMessage, (message) => {
     if (!keys(config.channels).includes(message.channel)) {
       return;

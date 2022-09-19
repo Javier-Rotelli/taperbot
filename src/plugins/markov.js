@@ -16,7 +16,8 @@ const debouncedSave = (data) => {
   }
 };
 
-export default (config, emitter, debug) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const chain = new MarkovChain("");
 
   if (fs.existsSync(chainFile)) {
