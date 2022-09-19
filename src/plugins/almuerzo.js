@@ -3,8 +3,6 @@ import splitWords from "../splitWords";
 
 import { userToString } from "../slackUtils";
 
-const almuerzoFile = "data/almuerzo.json";
-
 /** @type { import("./plugin").TaperbotPlugin } */
 export default ({ config, emitter, log, storage }) => {
   let store = storage.createStore(false, {
@@ -26,67 +24,67 @@ export default ({ config, emitter, log, storage }) => {
   const timeout = config.timeout;
   const messages = store.value.messages;
   Object.keys(messages).forEach((k) => {
-      const almuerzo = messages[k];
-      const ts = almuerzo.ts || k.split("-")[1];
-      const timeoutDate = new Date(ts * 1000 + timeout);
-      if (timeoutDate < new Date()) {
-        // muy viejo, lo borramos
-        messages[k] = undefined;
-        return;
+    const almuerzo = messages[k];
+    const ts = almuerzo.ts || k.split("-")[1];
+    const timeoutDate = new Date(ts * 1000 + timeout);
+    if (timeoutDate < new Date()) {
+      // muy viejo, lo borramos
+      messages[k] = undefined;
+      return;
+    }
+    if (typeof almuerzo === "string") {
+      return;
+    }
+    if (!almuerzo.triggers) {
+      // migrar almuerzos existentes
+      almuerzo.triggers = [triggerReaction];
+      almuerzo.isCounting = false;
+    }
+    Object.keys(almuerzo.reactions).forEach((kk) => {
+      if (!almuerzo.reactions[kk].hideUsers) {
+        almuerzo.reactions[kk].hideUsers = [];
       }
-      if (typeof almuerzo === "string") {
-        return;
-      }
-      if (!almuerzo.triggers) {
-        // migrar almuerzos existentes
-        almuerzo.triggers = [triggerReaction];
-        almuerzo.isCounting = false;
-      }
-      Object.keys(almuerzo.reactions).forEach((kk) => {
-        if (!almuerzo.reactions[kk].hideUsers) {
-          almuerzo.reactions[kk].hideUsers = [];
-        }
-      });
-      fetchReactedUsers(
-        almuerzo.channel,
-        almuerzo.originalMessage,
-        (error, reactedUsers) => {
-          if (reactedUsers) {
-            Object.values(almuerzo.reactions).forEach((r) => {
-              r.current = applyAll(r.current, reactedUsers[r.name] || []);
-            });
-            emitter.emit(
-              eventTypes.OUT.webGet,
-              "conversations.history",
-              {
-                channel: almuerzo.channel,
-                latest: almuerzo.ts,
-                oldest: almuerzo.ts,
-                inclusive: true,
-              },
-              (error, response) => {
-                let countMessage;
-                if (
-                  response.ok &&
-                  (countMessage = response.messages[0]) &&
-                  countMessage.reactions
-                ) {
-                  countMessage.reactions.forEach((r) => {
-                    if (almuerzo.reactions[r.name]) {
-                      almuerzo.reactions[r.name].hideUsers = r.users;
-                    }
-                  });
-                  updateMessage(k);
-                } else {
-                  log(error);
-                }
+    });
+    fetchReactedUsers(
+      almuerzo.channel,
+      almuerzo.originalMessage,
+      (error, reactedUsers) => {
+        if (reactedUsers) {
+          Object.values(almuerzo.reactions).forEach((r) => {
+            r.current = applyAll(r.current, reactedUsers[r.name] || []);
+          });
+          emitter.emit(
+            eventTypes.OUT.webGet,
+            "conversations.history",
+            {
+              channel: almuerzo.channel,
+              latest: almuerzo.ts,
+              oldest: almuerzo.ts,
+              inclusive: true,
+            },
+            (error, response) => {
+              let countMessage;
+              if (
+                response.ok &&
+                (countMessage = response.messages[0]) &&
+                countMessage.reactions
+              ) {
+                countMessage.reactions.forEach((r) => {
+                  if (almuerzo.reactions[r.name]) {
+                    almuerzo.reactions[r.name].hideUsers = r.users;
+                  }
+                });
+                updateMessage(k);
+              } else {
+                log(error);
               }
-            );
-          } else {
-            log(error);
-          }
+            }
+          );
+        } else {
+          log(error);
         }
-      );
+      }
+    );
   });
 
   function applyAll(previous, updated) {
