@@ -1,6 +1,31 @@
 import fs from 'fs'
+import { isEmpty, modifyPath, path as rPath } from 'ramda'
 
 let stores = {}
+
+function setPath(newValue, path, value) {
+  let func = typeof newValue === 'function' ? newValue : () => newValue
+  if (isEmpty(path)) {
+    return func(value)
+  }
+  return modifyPath(path, func, value)
+}
+
+function getPath(store, path) {
+  const newStore = {
+    get value() {
+      return rPath(path, store.value)
+    },
+    get(newPath) {
+      return getPath(newStore, newPath)
+    },
+    set(newValue, newPath = []) {
+      store.set(newValue, [...path, ...newPath])
+    },
+    close() {}
+  }
+  return newStore
+}
 
 export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) => ({
   createStore: (root, defaultValue) => {
@@ -27,9 +52,10 @@ export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) =
         }, writeDelay)
       }
     }
-    store.set = (newValue) => {
+    store.get = (path) => getPath(store, path)
+    store.set = (newValue, path = []) => {
       verbose && log("storage set value")
-      store.value = newValue
+      store.value = setPath(newValue, path, store.value)
       throttleWrite()
     }
     store._flush = () => {

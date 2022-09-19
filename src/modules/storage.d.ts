@@ -2,7 +2,8 @@ import { Debugger } from "debug"
 
 interface Store<T> {
   value: T
-  set: (newValue: T) => void
+  get: <U>(path: [string | number]) => Store<U>
+  set: (newValue: T | ((T) => T)) => void
   close: () => void
 }
 interface Storage {
