@@ -47,11 +47,13 @@ function reactTo(allReactions, words, emitter, ts, channel) {
 }
 
 /** @type { import("./plugin").TaperbotPlugin } */
-export default ({ config, emitter, log }) => {
+export default ({ config, emitter, log, storage }) => {
   const deleteReaction = config.deleteReaction;
-  let allReactions = {};
+  let allReactions = storage.createStore(false, {});
   if (fs.existsSync(reactionsFile)) {
-    allReactions = JSON.parse(fs.readFileSync(reactionsFile, "utf8"));
+    // migrar desde el archivo viejo (se puede borrar esto más tarde)
+    allReactions.set(JSON.parse(fs.readFileSync(reactionsFile, "utf8")));
+    fs.unlinkSync(reactionsFile);
   }
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
     const command = commandParser(message.text);
@@ -59,11 +61,10 @@ export default ({ config, emitter, log }) => {
       return;
     }
     let components = splitWords(command.text);
-    console.log(components);
     if (components.length === 1 && components[0] === "list") {
       let description = "Reactions configuradas:\n";
-      Object.keys(allReactions).forEach(function (word) {
-        description += word + ": :" + allReactions[word].join(": :") + ":\n";
+      Object.keys(allReactions.value).forEach(function (word) {
+        description += word + ": :" + allReactions.value[word].join(": :") + ":\n";
       });
       emitter.emit("send:message", description, message.channel);
     } else if (command.text) {
@@ -79,22 +80,18 @@ export default ({ config, emitter, log }) => {
           if (!word) {
             continue;
           }
-          if (!allReactions[word]) {
-            allReactions[word] = [];
-          }
-          let theArray = allReactions[word];
-          let index = theArray.indexOf(reaction);
+          const theArray = allReactions.get([word]);
+          let index = (theArray.value || []).indexOf(reaction);
           if (index < 0) {
-            theArray.push(reaction);
+            theArray.set((array) => (array || []).concat([reaction]));
             emitter.emit("send:message", "reaction agregada", message.channel);
           } else {
-            theArray.splice(index, 1);
+            theArray.set((array) => array.filter((r) => r !== reaction));
             emitter.emit("send:message", "reaction quitada", message.channel);
           }
-          if (theArray.length === 0) {
-            allReactions[word] = undefined;
+          if (theArray.value.length === 0) {
+            theArray.set(undefined);
           }
-          fs.writeFileSync(reactionsFile, JSON.stringify(allReactions), "utf8");
         }
       } else {
         emitter.emit(
@@ -122,7 +119,7 @@ export default ({ config, emitter, log }) => {
       words.add("<#" + payload.channel + ">");
     }
     reactTo(
-      allReactions,
+      allReactions.value,
       Array.from(words),
       emitter,
       payload.ts,
@@ -177,7 +174,7 @@ export default ({ config, emitter, log }) => {
       }
     } else {
       reactTo(
-        allReactions,
+        allReactions.value,
         [payload.reaction, ":" + payload.reaction + ":"],
         emitter,
         payload.item.ts,
