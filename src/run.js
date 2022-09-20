@@ -70,7 +70,6 @@ app.event("reaction_removed", async ({ event, logger }) => {
   }
 });
 
-initPlugins(config, emitter);
 
 const startServer = async () => {
   await app.start(process.env.PORT || 3000);
@@ -96,6 +95,7 @@ const startServer = async () => {
   //     reply_to: message.id,
   //   });
   // });
+  initPlugins(config, emitter);
 };
 
 const sendMessage = (channel, content, id = getNextId()) => {

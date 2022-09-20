@@ -24,5 +24,6 @@ const makeWebRequest = async (app, token, log, method, args, callback) => {
     callback(null, result);
   } catch (error) {
     log(error);
+    callback(error, null);
   }
 };
