@@ -26,11 +26,15 @@ function getPath(store, path) {
   }
 }
 
-function throttleWrite(store, writeDelay) {
+function writeFile(filename, value, log) {
+  fs.writeFileSync(filename, JSON.stringify(value), "utf8")
+  log && log("storage write")
+}
+function throttleWrite(store, filename, writeDelay, log) {
   if (!store.pendingSave) {
     store.pendingSave = setTimeout(() => {
       store.pendingSave = false
-      writeFile(store.value)
+      writeFile(filename, store.value, log)
     }, writeDelay)
   }
 }
@@ -44,10 +48,6 @@ export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) =
     }
     const value = (fs.existsSync(filename)) ?
       JSON.parse(fs.readFileSync(filename, "utf8")) : defaultValue
-    const writeFile = (value) => {
-      fs.writeFileSync(filename, JSON.stringify(value), "utf8")
-      verbose && log("storage write")
-    }
     const store = {
       value: value,
       pendingSave: false,
@@ -55,7 +55,7 @@ export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) =
       set: function (newValue, path = []) {
         verbose && log("storage set value")
         this.value = setPath(newValue, path, this.value)
-        throttleWrite(this, writeDelay)
+        throttleWrite(this, filename, writeDelay, verbose && log)
       },
       _flush: function () {
         if (this.pendingSave) {
