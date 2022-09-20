@@ -1,7 +1,8 @@
 import commandParser from "../commandParser";
 import eventTypes from "../eventTypes";
 
-export default (config, emitter, debug) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const lockedChannels = new Set();
   emitter.on(eventTypes.IN.receivedMessage, (message) => {
     const command = commandParser(message.text);
@@ -36,7 +37,7 @@ export default (config, emitter, debug) => {
       },
       (err) => {
         if (err) {
-          debug(err);
+          log(err);
         }
       }
     );

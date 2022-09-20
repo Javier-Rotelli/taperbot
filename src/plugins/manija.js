@@ -4,7 +4,8 @@ import table from "text-table";
 
 import commandParser from "./../commandParser";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const doc = new GoogleSpreadsheet(
     "1fW46QXKO4XDd-L8hoYFR30AzzVVDe4mL1xhZthbDgtI"
   );

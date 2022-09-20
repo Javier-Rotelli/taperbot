@@ -11,6 +11,7 @@ import {
 import adminPlugin from "./plugins/admin";
 import eventTypes from "./eventTypes";
 import { getFromAPI, postToAPI } from "./slackWeb";
+import createStorage from "./modules/storage";
 
 const initPlugins = (config, emitter) => {
   const pluginsFolder = "./plugins/";
@@ -19,13 +20,16 @@ const initPlugins = (config, emitter) => {
     .map((pluginName) => {
       log(`Iniciando plugin ${pluginName}`);
       const pluginConfig = config.plugins[pluginName];
-      return require(`${pluginsFolder}${pluginName}`).default(
-        pluginConfig,
+      return [pluginName, require(`${pluginsFolder}${pluginName}`).default, pluginConfig];
+    }).concat([["admin", adminPlugin, config]]).forEach( ([pluginName, plugin, config]) => {
+      const log = createDebug(`taperbot:${pluginName}`)
+      plugin({
+        config,
         emitter,
-        createDebug(`taperbot:${pluginName}`)
-      );
-    })
-    .concat([adminPlugin(config, emitter, createDebug("taperbot:admin"))]);
+        log,
+        storage: createStorage(pluginName, { log }),
+      })
+    });
 };
 
 const log = createDebug("taperbot:core");
@@ -66,7 +70,6 @@ app.event("reaction_removed", async ({ event, logger }) => {
   }
 });
 
-initPlugins(config, emitter);
 
 const startServer = async () => {
   await app.start(process.env.PORT || 3000);
@@ -92,6 +95,7 @@ const startServer = async () => {
   //     reply_to: message.id,
   //   });
   // });
+  initPlugins(config, emitter);
 };
 
 const sendMessage = (channel, content, id = getNextId()) => {

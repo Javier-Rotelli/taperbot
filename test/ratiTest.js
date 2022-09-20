@@ -36,7 +36,7 @@ describe("Test rati plugin", function () {
 
     emitter.on("send:message", spy);
 
-    rati(config, emitter, log);
+    rati({ config, emitter, log });
     emitter.emit(
       "reaction:added",
       getReactionPayload(new Date(2017, 3, 2), new Date(2017, 3, 3))
@@ -51,7 +51,7 @@ describe("Test rati plugin", function () {
 
     emitter.on("send:message", spy);
 
-    rati(config, emitter, log);
+    rati({ config, emitter, log });
     emitter.emit(
       "reaction:added",
       getReactionPayload(new Date(2017, 3, 2), new Date(2017, 3, 2))
@@ -66,7 +66,7 @@ describe("Test rati plugin", function () {
 
     emitter.on("send:message", spy);
 
-    rati(config, emitter, log);
+    rati({ config, emitter, log });
     emitter.emit(
       "reaction:added",
       getReactionPayload(new Date(2017, 3, 2), new Date(2017, 3, 3))

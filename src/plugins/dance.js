@@ -3,7 +3,8 @@ import eventTypes from "../eventTypes";
 import frames from "./animations/flip.json";
 import waves from "./animations/waves.json";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const animate = (ts, channel, [frame, ...tail]) => {
     emitter.emit(
       eventTypes.OUT.webPost,

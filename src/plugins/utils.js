@@ -1,7 +1,8 @@
 import commandParser from "../commandParser";
 import { getChannels, getGroups, getUsers } from "../slackUtils";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const processMessage = async (message) => {
     const command = commandParser(message.text);
     if (command === null) {

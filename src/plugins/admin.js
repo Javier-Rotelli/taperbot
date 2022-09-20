@@ -2,7 +2,8 @@ import { omit } from "ramda";
 import commandParser from "../commandParser";
 import eventTypes from "../eventTypes";
 
-export default (config, emitter, log) => {
+/** @type { import("./plugin").TaperbotPlugin } */
+export default ({ config, emitter, log }) => {
   const processMessage = async (message) => {
     const command = commandParser(message.text);
     if (command === null) {
