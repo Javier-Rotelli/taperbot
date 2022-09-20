@@ -1,14 +1,14 @@
 import fs from 'fs'
-import { isEmpty, modifyPath, path as rPath } from 'ramda'
+import { isEmpty, assocPath, path as rPath } from 'ramda'
 
 let stores = {}
 
 function setPath(newValue, path, value) {
-  let func = typeof newValue === 'function' ? newValue : () => newValue
+  newValue = typeof newValue === 'function' ? newValue(rPath(path, value)) : newValue
   if (isEmpty(path)) {
-    return func(value)
+    return newValue
   }
-  return modifyPath(path, func, value)
+  return assocPath(path, newValue, value)
 }
 
 function getPath(store, path) {

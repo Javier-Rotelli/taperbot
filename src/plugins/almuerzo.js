@@ -3,6 +3,14 @@ import splitWords from "../splitWords";
 
 import { userToString } from "../slackUtils";
 
+function removeLast(value, array) {
+  let index = array.lastIndexOf(value);
+  if (index >= 0) {
+    return array.slice(0, index).concat(array.slice(index + 1))
+  }
+  return array;
+}
+
 /** @type { import("./plugin").TaperbotPlugin } */
 export default ({ config, emitter, log, storage }) => {
   let store = storage.createStore(false, {
@@ -22,47 +30,51 @@ export default ({ config, emitter, log, storage }) => {
   const reverseCountMessage = config.reverseCountMessage;
   const ignoreUsers = config.ignoreUsers;
   const timeout = config.timeout;
-  const messages = store.value.messages;
-  Object.keys(messages).forEach((k) => {
-    const almuerzo = messages[k];
-    const ts = almuerzo.ts || k.split("-")[1];
+  const messages = store.get(["messages"]);
+  Object.keys(messages.value).forEach((k) => {
+    const almuerzo = messages.get([k]);
+    const ts = almuerzo.value.ts || k.split("-")[1];
     const timeoutDate = new Date(ts * 1000 + timeout);
     if (timeoutDate < new Date()) {
       // muy viejo, lo borramos
-      messages[k] = undefined;
+      almuerzo.set(undefined);
       return;
     }
-    if (typeof almuerzo === "string") {
+    if (typeof almuerzo.value === "string") {
       return;
     }
-    if (!almuerzo.triggers) {
+    if (!almuerzo.value.triggers) {
       // migrar almuerzos existentes
-      almuerzo.triggers = [triggerReaction];
-      almuerzo.isCounting = false;
+      almuerzo.get(["triggers"]).set([triggerReaction]);
+      almuerzo.get(["isCounting"]).set(false);
     }
-    Object.keys(almuerzo.reactions).forEach((kk) => {
-      if (!almuerzo.reactions[kk].hideUsers) {
-        almuerzo.reactions[kk].hideUsers = [];
+    const reactions = almuerzo.get(["reactions"])
+    Object.keys(reactions.value).forEach((kk) => {
+      const hu = reactions.get([kk, "hideUsers"])
+      if (!hu.value) {
+        hu.set([]);
       }
     });
     fetchReactedUsers(
-      almuerzo.channel,
-      almuerzo.originalMessage,
+      almuerzo.value.channel,
+      almuerzo.value.originalMessage,
       (error, reactedUsers) => {
+        error && log(error)
         if (reactedUsers) {
-          Object.values(almuerzo.reactions).forEach((r) => {
-            r.current = applyAll(r.current, reactedUsers[r.name] || []);
+          Object.keys(reactions.value).forEach((k) => {
+            reactions.get([k, "current"]).set((current) => applyAll(current || [], reactedUsers[k] || []));
           });
           emitter.emit(
             eventTypes.OUT.webGet,
             "conversations.history",
             {
-              channel: almuerzo.channel,
-              latest: almuerzo.ts,
-              oldest: almuerzo.ts,
+              channel: almuerzo.value.channel,
+              latest: almuerzo.value.ts,
+              oldest: almuerzo.value.ts,
               inclusive: true,
             },
             (error, response) => {
+              error && log(error)
               let countMessage;
               if (
                 response.ok &&
@@ -70,18 +82,14 @@ export default ({ config, emitter, log, storage }) => {
                 countMessage.reactions
               ) {
                 countMessage.reactions.forEach((r) => {
-                  if (almuerzo.reactions[r.name]) {
-                    almuerzo.reactions[r.name].hideUsers = r.users;
+                  if (almuerzo.value.reactions[r.name]) {
+                    almuerzo.get(["reactions", r.name, "hideUsers"]).set(r.users);
                   }
                 });
-                updateMessage(k);
-              } else {
-                log(error);
               }
+              updateMessage(k);
             }
           );
-        } else {
-          log(error);
         }
       }
     );
@@ -95,7 +103,8 @@ export default ({ config, emitter, log, storage }) => {
     return retval;
   }
   function updateMessage(key, isNew) {
-    store.set(store.value); // storage api usage is not optimal // TODO: improve
+    // the following changes to message can be recreated so they don't need to be in the file
+    // but they don't bother being there (so we don't update to use the set() function here)
     let message = store.value.messages[key];
     if (typeof message === "string") {
       message = store.value.messages[message];
@@ -163,9 +172,9 @@ export default ({ config, emitter, log, storage }) => {
           as_user: true,
         },
         (err, response) => {
-          log(err);
-          store.value.messages[key].ts = response.ts;
-          store.value.messages[message.channel + "-" + response.ts] = key;
+          err && log(err);
+          store.get(["messages", key, "ts"]).set(response.ts);
+          store.get(["messages", message.channel + "-" + response.ts]).set(key);
         }
       );
     } else {
@@ -178,7 +187,7 @@ export default ({ config, emitter, log, storage }) => {
           ts: message.ts,
         },
         (error) => {
-          log(error);
+          error && log(error);
         }
       );
     }
@@ -258,7 +267,7 @@ export default ({ config, emitter, log, storage }) => {
         inclusive: true,
       },
       (error, response) => {
-        log(error);
+        error && log(error);
         let originalMessage;
         if (response.ok && (originalMessage = response.messages[0])) {
           emitter.emit(
@@ -303,7 +312,8 @@ export default ({ config, emitter, log, storage }) => {
     const user = payload.user;
     const key = channel + "-" + ts;
     const reaction = payload.reaction.split("::")[0];
-    if (allTriggers.indexOf(reaction) >= 0 && !store.value.messages[key]) {
+    const message = store.get(["messages", key])
+    if (allTriggers.indexOf(reaction) >= 0 && !message.value) {
       const triggers = [reaction];
       emitter.emit(
         eventTypes.OUT.startTyping,
@@ -313,14 +323,15 @@ export default ({ config, emitter, log, storage }) => {
         (_) => {}
       );
       const type = typeFromTriggers(triggers);
-      !store.value.messages[key] &&
-        fetchReactedUsers(channel, ts, (error, reactedUsers, message) => {
+      !message.value &&
+        fetchReactedUsers(channel, ts, (error, reactedUsers, slackMessage) => {
+          error && log(error)
           if (reactedUsers) {
             const theDefaultReactions = type.isReverseCount
               ? defaultReverseCountReactions
               : defaultReactions;
             const reactedInMessage = [
-              ...((message.text || "").match(/(:[^\s:]+:)/gim) || []),
+              ...((slackMessage.text || "").match(/(:[^\s:]+:)/gim) || []),
             ]
               .map((x) => x.substring(1, x.length - 1))
               .filter((x) => !x.startsWith("skin-tone-"));
@@ -353,7 +364,7 @@ export default ({ config, emitter, log, storage }) => {
                   channel: channel,
                 },
                 (error, response) => {
-                  store.value.messages[key] = {
+                  message.set({
                     channel: channel,
                     user: user,
                     originalMessage: ts,
@@ -365,36 +376,32 @@ export default ({ config, emitter, log, storage }) => {
                       : [],
                     reactions: reactionsInfo,
                     ...type,
-                  };
+                  });
                   updateMessage(key, true);
                 }
               );
             }
-          } else {
-            log(error);
           }
         });
-    } else if (store.value.messages[key]) {
-      let m = store.value.messages[key];
-      if (typeof m === "string") {
-        const mm = store.value.messages[m];
-        const r = mm.reactions[reaction];
-        if (r) {
-          r.hideUsers.push(payload.user);
+    } else if (message.value) {
+      if (typeof message.value === "string") {
+        const mm = store.get(["messages", m]);
+        const r = mm.get(["reactions", reaction]);
+        if (r.value) {
+          r.get(["hideUsers"]).set((array) => array.concat([payload.user]));
           updateMessage(key);
         }
       } else if (
         allTriggers.indexOf(reaction) >= 0 &&
-        m.user === payload.user
+        message.value.user === payload.user
       ) {
-        const m = store.value.messages[key];
-        m.triggers.push(reaction);
-        store.value.messages[key] = { ...m, ...typeFromTriggers(m.triggers) };
+        const triggers = message.value.triggers.concat([reaction]);
+        message.set((m) => ({ ...m, triggers, ...typeFromTriggers(triggers) }));
         updateMessage(key);
       } else {
-        const r = m.reactions[reaction];
-        if (r) {
-          r.current.push(payload.user);
+        const r = message.get(["reactions", reaction]);
+        if (r.value) {
+          r.get(["current"]).set((c) => c.concat([payload.user]));
           updateMessage(key);
         }
       }
@@ -405,36 +412,28 @@ export default ({ config, emitter, log, storage }) => {
     const channel = payload.item.channel;
     const key = channel + "-" + ts;
     const reaction = payload.reaction.split("::")[0];
-    if (allTriggers.indexOf(reaction) < 0 && store.value.messages[key]) {
-      if (typeof store.value.messages[key] === "string") {
-        const r = store.value.messages[store.value.messages[key]].reactions[reaction];
-        const index = r ? r.hideUsers.lastIndexOf(payload.user) : -1;
+    const message = store.get(["messages", key])
+    if (allTriggers.indexOf(reaction) < 0 && message.value) {
+      if (typeof message.value === "string") {
+        const hu = store.get(["messages", message.value, "reactions", reaction, "hideUsers"]);
+        const index = (hu.value || []).lastIndexOf(payload.user);
         if (index >= 0) {
-          r.hideUsers.splice(index, 1);
+          hu.set((hideUsers) => (hideUsers || []).filter((item) => item !== payload.user));
           updateMessage(key);
         }
       } else {
-        const r = store.value.messages[key].reactions[reaction];
-        const index = r ? r.current.lastIndexOf(payload.user) : -1;
-        if (index >= 0) {
-          r.current.splice(index, 1);
-          updateMessage(key);
-        }
+        message.get(["reactions", reaction, "current"])
+          .set((current) => removeLast(payload.user, current));
+        updateMessage(key);
       }
     } else if (
       allTriggers.indexOf(reaction) >= 0 &&
-      store.value.messages[key] &&
-      store.value.messages[key].user === payload.user
+      message.get(["user"]).value === payload.user
     ) {
-      const m = store.value.messages[key];
-      log(m);
-      if (m.triggers.length > 1) {
-        const index = m.triggers.lastIndexOf(reaction);
-        if (index >= 0) {
-          m.triggers.splice(index, 1);
-          store.value.messages[key] = { ...m, ...typeFromTriggers(m.triggers) };
-          updateMessage(key);
-        }
+      if (message.value.triggers.length > 1) {
+        const triggers = removeLast(reaction, message.value.triggers);
+        messages.set((m) => ({ ...m, triggers, ...typeFromTriggers(triggers) }));
+        updateMessage(key);
         return;
       }
       emitter.emit(
@@ -446,7 +445,7 @@ export default ({ config, emitter, log, storage }) => {
         },
         (error) => {
           if (!error) {
-            store.value.messages[key] = undefined;
+            message.set(undefined);
           } else {
             log(error);
           }
@@ -460,7 +459,8 @@ export default ({ config, emitter, log, storage }) => {
       (payload.previous_message && payload.previous_message.thread_ts);
     const channel = payload.channel;
     const key = channel + "-" + ts;
-    if (!store.value.messages[key]) {
+    const message = store.get(["messages", key]);
+    if (!message.value) {
       return;
     }
     let newText;
@@ -480,18 +480,16 @@ export default ({ config, emitter, log, storage }) => {
     }
     let r;
     const added = countFromText(newText);
-    r = added && store.value.messages[key].reactions[added.name];
-    if (r) {
-      r.current = r.current.concat(added.users);
+    r = added && message.get(["reactions", added.name]);
+    if (r && r.value) {
+      r.get(["current"]).set((current) => current.concat(added.users));
     }
     const deleted = countFromText(oldText);
-    r = deleted && store.value.messages[key].reactions[deleted.name];
-    if (r) {
+    r = deleted && message.get(["reactions", deleted.name]);
+    if (r && r.value) {
+      const current = r.get(["current"])
       deleted.users.forEach((u) => {
-        const index = r.current.lastIndexOf(u);
-        if (index >= 0) {
-          r.current.splice(index, 1);
-        }
+        current.set(c => removeLast(u, c));
       });
     }
     updateMessage(key);
