@@ -51,7 +51,7 @@ describe("Test storage", function () {
     store = storage.createStore("substore", {})
     substore = store.get(['a', 'b', 0])
     expect(substore.value).to.eql({ c: 'chau' })
-    substore.get(['c']).set((v) => `hola-${v}`)
+    substore.get(['c']).set((value) => `hola-${value}`)
     expect(substore.value).to.eql({ c: 'hola-chau' })
     substore = substore.get(["d"])
     substore.set("nuevo")
