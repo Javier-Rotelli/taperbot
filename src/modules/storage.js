@@ -12,19 +12,27 @@ function setPath(newValue, path, value) {
 }
 
 function getPath(store, path) {
-  const newStore = {
+  return {
     get value() {
       return rPath(path, store.value)
     },
     get(newPath) {
-      return getPath(newStore, newPath)
+      return getPath(this, newPath)
     },
     set(newValue, newPath = []) {
       store.set(newValue, [...path, ...newPath])
     },
     close() {}
   }
-  return newStore
+}
+
+function throttleWrite(store, writeDelay) {
+  if (!store.pendingSave) {
+    store.pendingSave = setTimeout(() => {
+      store.pendingSave = false
+      writeFile(store.value)
+    }, writeDelay)
+  }
 }
 
 export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) => ({
@@ -42,40 +50,32 @@ export default (pluginName, { verbose = false, log, writeDelay = 10000 } = {}) =
     }
     const store = {
       value: value,
-    }
-    store.pendingSave = false
-    const throttleWrite = () => {
-      if (!store.pendingSave) {
-        store.pendingSave = setTimeout(() => {
-          store.pendingSave = false
-          writeFile(store.value)
-        }, writeDelay)
+      pendingSave: false,
+      get: function (path) { return getPath(this, path) },
+      set: function (newValue, path = []) {
+        verbose && log("storage set value")
+        this.value = setPath(newValue, path, this.value)
+        throttleWrite(this, writeDelay)
+      },
+      _flush: function () {
+        if (this.pendingSave) {
+          clearTimeout(this.pendingSave)
+          writeFile(this.value)
+          this.pendingSave = false
+        }
+      },
+      close: function () {
+        this._flush()
+        delete stores[filename]
+      },
+      delete: function () {
+        this.value = defaultValue
+        if (this.pendingSave) {
+          clearTimeout(this.pendingSave)
+          this.pendingSave = false
+        }
+        fs.existsSync(filename) && fs.unlinkSync(filename)
       }
-    }
-    store.get = (path) => getPath(store, path)
-    store.set = (newValue, path = []) => {
-      verbose && log("storage set value")
-      store.value = setPath(newValue, path, store.value)
-      throttleWrite()
-    }
-    store._flush = () => {
-      if (store.pendingSave) {
-        clearTimeout(store.pendingSave)
-        writeFile(store.value)
-        store.pendingSave = false
-      }
-    }
-    store.close = () => {
-      store._flush()
-      delete stores[filename]
-    }
-    store.delete = () => {
-      store.value = defaultValue
-      if (store.pendingSave) {
-        clearTimeout(store.pendingSave)
-        store.pendingSave = false
-      }
-      fs.existsSync(filename) && fs.unlinkSync(filename)
     }
     stores[filename] = store
     verbose && log("storage created")
