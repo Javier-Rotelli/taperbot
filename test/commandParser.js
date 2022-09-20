@@ -21,7 +21,6 @@ describe("Test commandParser", function () {
     expect(result).to.be.equal(null);
 
     result = commandParser("<@U3FTH76RZ> saraza /testCommand asd asd");
-    console.log(result);
     expect(result).to.be.equal(null);
 
     done();

@@ -10,8 +10,9 @@ describe("Test storage", function () {
   let storage = createStorage("tests")
   fs.existsSync('data/tests.json') && fs.unlinkSync('data/tests.json')
   fs.existsSync('data/tests-other.json') && fs.unlinkSync('data/tests-other.json')
+  fs.existsSync('data/tests-substore.json') && fs.unlinkSync('data/tests-substore.json')
   it("default store", function () {
-    const store = storage.createStore() // default
+    let store = storage.createStore() // default
     expect(store.value).to.equal(undefined)
     expect(store).to.equal(storage._getCurrentStores()['data/tests.json'])
     store.close()
@@ -35,6 +36,26 @@ describe("Test storage", function () {
     store.set("anotherValue")
     store = storage.createStore("other", "anotherDefaultValue")
     expect(store.value).to.equal("anotherValue")
+    store.delete()
+  })
+  it("sub store", function () {
+    let store = storage.createStore("substore", {
+      a: { b: [{ c: 'hola' }] }
+    })
+    let substore = store.get(['a', 'b', 0, 'c'])
+    expect(substore.value).to.equal('hola')
+    substore.set('chau')
+    expect(substore.value).to.equal('chau')
+    expect(store.value).to.eql({ a: { b: [{ c: 'chau' }] } })
+    store.close()
+    store = storage.createStore("substore", {})
+    substore = store.get(['a', 'b', 0])
+    expect(substore.value).to.eql({ c: 'chau' })
+    substore.get(['c']).set((v) => `hola-${v}`)
+    expect(substore.value).to.eql({ c: 'hola-chau' })
+    substore = substore.get(["d"])
+    substore.set("nuevo")
+    expect(substore.value).to.equal("nuevo")
     store.delete()
   })
 })
