@@ -9,6 +9,7 @@ import { Configuration, OpenAIApi } from "openai";
  * Test it from terminal: npm run cli /aiudame how do I set a public folder for an express server
  **/
 export default ({ config, emitter, log }) => {
+  log(config);
   const openai = new OpenAIApi(
     new Configuration({
       apiKey: config.apiKey,
@@ -30,7 +31,7 @@ export default ({ config, emitter, log }) => {
         model: "text-davinci-003",
         prompt: `Assume that I am a software engineer asking you this technical question:
 ${prompt + (prompt.endsWith(".") ? "" : ".")}
-Provide a code example if needed.
+Provide a code example if needed. Answer should be in markdown format.
 `,
         max_tokens: 175,
       })
