@@ -1,4 +1,5 @@
 import commandParser from "../commandParser";
+import eventTypes from "../eventTypes";
 import { Configuration, OpenAIApi } from "openai";
 
 /**
@@ -16,7 +17,7 @@ export default ({ config, emitter, log }) => {
     })
   );
 
-  emitter.on("received:message", (message) => {
+  emitter.on(eventTypes.IN.receivedMessage, (message) => {
     const command = commandParser(message.text);
     if (command === null || command.command !== "aiudame") {
       return;
@@ -38,8 +39,11 @@ Provide a code example if needed. Answer should be in markdown format.
       .then((_) => {
         // console.log(_.data.choices[0].text.trim());
         emitter.emit(
-          "send:message",
-          _.data.choices[0].text.trim(),
+          eventTypes.OUT.sendMessage,
+          {
+            text: _.data.choices[0].text.trim(),
+            thread_ts: message.ts
+          },
           message.channel
         );
       })
