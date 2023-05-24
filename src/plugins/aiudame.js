@@ -42,7 +42,7 @@ Provide a code example if needed. Answer should be in markdown format.
           eventTypes.OUT.sendMessage,
           {
             text: _.data.choices[0].text.trim(),
-            thread_ts: message.ts
+            thread_ts: message.thread_ts || message.ts
           },
           message.channel
         );
