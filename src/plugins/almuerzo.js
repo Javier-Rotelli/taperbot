@@ -6,7 +6,7 @@ import { userToString } from "../slackUtils";
 function removeLast(value, array) {
   let index = array.lastIndexOf(value);
   if (index >= 0) {
-    return array.slice(0, index).concat(array.slice(index + 1))
+    return array.slice(0, index).concat(array.slice(index + 1));
   }
   return array;
 }
@@ -48,9 +48,9 @@ export default ({ config, emitter, log, storage }) => {
       almuerzo.get(["triggers"]).set([triggerReaction]);
       almuerzo.get(["isCounting"]).set(false);
     }
-    const reactions = almuerzo.get(["reactions"])
+    const reactions = almuerzo.get(["reactions"]);
     Object.keys(reactions.value).forEach((kk) => {
-      const hu = reactions.get([kk, "hideUsers"])
+      const hu = reactions.get([kk, "hideUsers"]);
       if (!hu.value) {
         hu.set([]);
       }
@@ -59,10 +59,12 @@ export default ({ config, emitter, log, storage }) => {
       almuerzo.value.channel,
       almuerzo.value.originalMessage,
       (error, reactedUsers) => {
-        error && log(error)
+        error && log(error);
         if (reactedUsers) {
           Object.keys(reactions.value).forEach((k) => {
-            reactions.get([k, "current"]).set((current) => applyAll(current || [], reactedUsers[k] || []));
+            reactions
+              .get([k, "current"])
+              .set((current) => applyAll(current || [], reactedUsers[k] || []));
           });
           emitter.emit(
             eventTypes.OUT.webGet,
@@ -74,7 +76,7 @@ export default ({ config, emitter, log, storage }) => {
               inclusive: true,
             },
             (error, response) => {
-              error && log(error)
+              error && log(error);
               let countMessage;
               if (
                 response.ok &&
@@ -83,7 +85,9 @@ export default ({ config, emitter, log, storage }) => {
               ) {
                 countMessage.reactions.forEach((r) => {
                   if (almuerzo.value.reactions[r.name]) {
-                    almuerzo.get(["reactions", r.name, "hideUsers"]).set(r.users);
+                    almuerzo
+                      .get(["reactions", r.name, "hideUsers"])
+                      .set(r.users);
                   }
                 });
               }
@@ -312,7 +316,7 @@ export default ({ config, emitter, log, storage }) => {
     const user = payload.user;
     const key = channel + "-" + ts;
     const reaction = payload.reaction.split("::")[0];
-    const message = store.get(["messages", key])
+    const message = store.get(["messages", key]);
     if (allTriggers.indexOf(reaction) >= 0 && !message.value) {
       const triggers = [reaction];
       emitter.emit(
@@ -320,12 +324,12 @@ export default ({ config, emitter, log, storage }) => {
         {
           channel: channel,
         },
-        (_) => {}
+        () => {}
       );
       const type = typeFromTriggers(triggers);
       !message.value &&
         fetchReactedUsers(channel, ts, (error, reactedUsers, slackMessage) => {
-          error && log(error)
+          error && log(error);
           if (reactedUsers) {
             const theDefaultReactions = type.isReverseCount
               ? defaultReverseCountReactions
@@ -385,7 +389,7 @@ export default ({ config, emitter, log, storage }) => {
         });
     } else if (message.value) {
       if (typeof message.value === "string") {
-        const mm = store.get(["messages", m]);
+        const mm = store.get(["messages", message.value]);
         const r = mm.get(["reactions", reaction]);
         if (r.value) {
           r.get(["hideUsers"]).set((array) => array.concat([payload.user]));
@@ -412,17 +416,26 @@ export default ({ config, emitter, log, storage }) => {
     const channel = payload.item.channel;
     const key = channel + "-" + ts;
     const reaction = payload.reaction.split("::")[0];
-    const message = store.get(["messages", key])
+    const message = store.get(["messages", key]);
     if (allTriggers.indexOf(reaction) < 0 && message.value) {
       if (typeof message.value === "string") {
-        const hu = store.get(["messages", message.value, "reactions", reaction, "hideUsers"]);
+        const hu = store.get([
+          "messages",
+          message.value,
+          "reactions",
+          reaction,
+          "hideUsers",
+        ]);
         const index = (hu.value || []).lastIndexOf(payload.user);
         if (index >= 0) {
-          hu.set((hideUsers) => (hideUsers || []).filter((item) => item !== payload.user));
+          hu.set((hideUsers) =>
+            (hideUsers || []).filter((item) => item !== payload.user)
+          );
           updateMessage(key);
         }
       } else {
-        message.get(["reactions", reaction, "current"])
+        message
+          .get(["reactions", reaction, "current"])
           .set((current) => removeLast(payload.user, current));
         updateMessage(key);
       }
@@ -432,7 +445,11 @@ export default ({ config, emitter, log, storage }) => {
     ) {
       if (message.value.triggers.length > 1) {
         const triggers = removeLast(reaction, message.value.triggers);
-        messages.set((m) => ({ ...m, triggers, ...typeFromTriggers(triggers) }));
+        messages.set((m) => ({
+          ...m,
+          triggers,
+          ...typeFromTriggers(triggers),
+        }));
         updateMessage(key);
         return;
       }
@@ -440,8 +457,8 @@ export default ({ config, emitter, log, storage }) => {
         eventTypes.OUT.webPost,
         "chat.delete",
         {
-          channel: m.channel,
-          ts: m.ts,
+          channel: message.channel,
+          ts: message.ts,
         },
         (error) => {
           if (!error) {
@@ -487,9 +504,9 @@ export default ({ config, emitter, log, storage }) => {
     const deleted = countFromText(oldText);
     r = deleted && message.get(["reactions", deleted.name]);
     if (r && r.value) {
-      const current = r.get(["current"])
+      const current = r.get(["current"]);
       deleted.users.forEach((u) => {
-        current.set(c => removeLast(u, c));
+        current.set((c) => removeLast(u, c));
       });
     }
     updateMessage(key);
